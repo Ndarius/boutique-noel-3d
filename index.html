@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Atelier Noël — La boutique 3D de la décoration de Noël</title>
+    <meta name="description" content="Promenez-vous dans notre marché de Noël en 3D : 5 rayons de décorations — sapins, boules, lumières, crèches et cadeaux." />
+    <meta name="theme-color" content="#0b1426" />
+    <meta property="og:title" content="Atelier Noël — Boutique 3D de Noël" />
+    <meta property="og:description" content="Un marché de Noël en 3D avec 5 rayons de décorations." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="scene" aria-hidden="true"></div>
+
+    <!-- Écran d'accueil -->
+    <div id="loader" role="dialog" aria-modal="true" aria-labelledby="loader-title">
+      <div class="loader-snow" aria-hidden="true"></div>
+      <div class="loader-card">
+        <div class="loader-star" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z"/></svg>
+        </div>
+        <p class="eyebrow">Marché de Noël en 3D</p>
+        <h1 id="loader-title">Atelier <em>Noël</em></h1>
+        <p class="loader-sub">Cinq chalets, des centaines de lumières et toute la décoration de vos fêtes.</p>
+        <div class="loader-progress" aria-live="polite">
+          <div class="bar"><span id="loader-bar"></span></div>
+          <p id="loader-status">Préparation du marché…</p>
+        </div>
+        <div class="loader-actions" id="loader-actions" hidden>
+          <button class="btn btn-gold" id="enter-music">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            Entrer en musique
+          </button>
+          <button class="btn btn-ghost" id="enter-silent">Entrer sans le son</button>
+        </div>
+        <p class="loader-hint">Glissez pour regarder autour de vous · Cliquez sur un chalet pour entrer</p>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <a href="/" data-link class="brand" aria-label="Atelier Noël — accueil">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z"/></svg></span>
+        <span class="brand-name">Atelier <em>Noël</em></span>
+      </a>
+      <nav class="rayon-nav" id="rayon-nav" aria-label="Rayons de la boutique"></nav>
+      <div class="actions">
+        <button class="icon-btn" id="sound-btn" aria-pressed="false" title="Musique (M)">
+          <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+          <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+          <span class="sr-only">Activer ou couper la musique</span>
+        </button>
+        <button class="icon-btn" id="cart-btn" title="Panier">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+          <span class="badge" id="cart-count" hidden>0</span>
+          <span class="sr-only">Ouvrir le panier</span>
+        </button>
+        <button class="icon-btn menu-btn" id="menu-btn" aria-expanded="false" aria-controls="rayon-nav" title="Rayons">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <span class="sr-only">Menu des rayons</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <aside id="side-panel" class="panel side-panel" aria-live="polite"></aside>
+      <aside id="product-panel" class="panel product-panel" aria-live="polite" hidden></aside>
+    </main>
+
+    <div class="dock" id="dock">
+      <button class="dock-btn" id="dock-prev" aria-label="Rayon précédent">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+      </button>
+      <a href="/" data-link class="dock-home" id="dock-home">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>
+        <span>Plan du marché</span>
+      </a>
+      <div class="dock-dots" id="dock-dots"></div>
+      <button class="dock-btn" id="dock-next" aria-label="Rayon suivant">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <div id="tooltip" role="tooltip" hidden></div>
+
+    <div id="cart-backdrop" hidden></div>
+    <aside id="cart-drawer" class="cart-drawer" aria-label="Panier" aria-hidden="true"></aside>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <noscript>Ce site en 3D nécessite JavaScript et WebGL.</noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
