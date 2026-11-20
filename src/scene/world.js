@@ -322,6 +322,8 @@ export function createWorld(container, rayons) {
 
   // ---------------------------------------------------------------- Boucle
   let introSpin = true;
+  let director = null;
+  const updaters = [];
   let elapsed = 0;
   let last = performance.now();
   function frame() {
@@ -332,7 +334,11 @@ export function createWorld(container, rayons) {
     elapsed += dt;
     const t = elapsed;
 
-    if (flight) {
+    for (const u of updaters) u(dt, t, realDt);
+
+    if (director) {
+      director(realDt);
+    } else if (flight) {
       // temps réel : le vol dure toujours la même durée, quelle que soit la fluidité
       flight.t += realDt / flight.duration;
       if (flight.t >= 1) {
@@ -374,7 +380,7 @@ export function createWorld(container, rayons) {
     } else selRing.material.opacity = Math.max(0, selRing.material.opacity - dt * 2);
 
     for (const c of chalets) {
-      c.signMat.emissiveIntensity = 0.55 + (c.highlight ? 0.45 : 0) + Math.sin(t * 2 + c.index) * 0.03;
+      c.signMat.emissiveIntensity = (0.55 + (c.highlight ? 0.45 : 0) + Math.sin(t * 2 + c.index) * 0.03) * (c.illum ?? 1);
     }
 
     composer.render();
@@ -391,9 +397,67 @@ export function createWorld(container, rayons) {
   }
   addEventListener('resize', resize);
 
+  // ---------------------------------------------------------------- Allumage du village
+  // Tout ce qui brille (ampoules, lanternes, flammes, lumières des chalets) est
+  // recensé pour pouvoir « allumer » le village en vague depuis la cheminée.
+  const glowing = [];
+  scene.updateMatrixWorld(true);
+  scene.traverse((o) => {
+    if (o === moonDisk || o === selRing) return;
+    const p = o.getWorldPosition(new THREE.Vector3());
+    if (o.isLight && o.isPointLight) glowing.push({ light: o, base: o.intensity, p });
+    else if ((o.isMesh || o.isSprite) && o.material && !Array.isArray(o.material) && (o.material.isMeshBasicMaterial || o.material.isSpriteMaterial)) {
+      const c = o.material.color;
+      if (Math.max(c.r, c.g, c.b) >= 0.99) glowing.push({ mat: o.material, base: c.clone(), p });
+    }
+  });
+  function setIllumination(center, radius) {
+    const f = (d) => THREE.MathUtils.clamp((radius - d) / 5, 0, 1);
+    for (const g of glowing) {
+      const k = f(g.p.distanceTo(center));
+      if (g.light) g.light.intensity = g.base * k;
+      else g.mat.color.copy(g.base).multiplyScalar(0.07 + 0.93 * k); // éteint = verre sombre, pas noir
+    }
+    for (const c of chalets) c.illum = f(c.pos.distanceTo(center));
+  }
+
+  // ---------------------------------------------------------------- Cheminée (chalet du fond)
+  const chimneyChalet = chalets[2];
+  const chimney = buildChimney();
+  chimney.group.position.set(1.8, 0, -0.85);
+  chimneyChalet.group.add(chimney.group);
+  chimneyChalet.group.updateMatrixWorld(true);
+  const chimneyTop = chimney.top.clone().applyMatrix4(chimney.group.matrixWorld);
+  updaters.push((dt, t) => chimney.update(dt, t));
+
+  // Précompile les shaders pour éviter les à-coups au premier affichage
+  renderer.compileAsync?.(scene, camera).catch(() => {});
+
   frame();
 
   return {
+    setIllumination,
+    refreshSigns() {
+      for (const c of chalets) {
+        const tex = signTexture({ number: c.rayon.number, title: c.rayon.name, accent: c.rayon.accent });
+        c.signMat.map = tex;
+        c.signMat.emissiveMap = tex;
+        c.signMat.needsUpdate = true;
+      }
+    },
+    chimneyTop,
+    addUpdater: (fn) => updaters.push(fn),
+    setDirector(fn) {
+      director = fn;
+      introSpin = false;
+      controls.enabled = !fn;
+    },
+    releaseCamera(target) {
+      director = null;
+      controls.target.copy(target);
+      applyLimits('overview');
+      controls.enabled = true;
+    },
     renderer,
     scene,
     camera,
@@ -741,6 +805,62 @@ function buildSnow(count) {
           pos[j] = (r() - 0.5) * S;
           pos[j + 2] = (r() - 0.5) * S;
         }
+      }
+      geo.attributes.position.needsUpdate = true;
+    },
+  };
+}
+
+// Cheminée en briques avec fumée qui s'élève
+function buildChimney() {
+  const g = new THREE.Group();
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = '#5a2a20';
+  x.fillRect(0, 0, 128, 128);
+  for (let row = 0; row < 8; row++) {
+    for (let col = -1; col < 4; col++) {
+      const v = 120 + Math.floor(Math.random() * 40);
+      x.fillStyle = `rgb(${v},${Math.floor(v * 0.42)},${Math.floor(v * 0.32)})`;
+      x.fillRect(col * 36 + (row % 2) * 18 + 2, row * 16 + 2, 32, 12);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, 2);
+  const brick = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.0, 0.8), brick);
+  body.position.y = 4.95;
+  body.castShadow = true;
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.16, 1.0), std('#4a2018', 0.9));
+  cap.position.y = 6.0;
+  const snow = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.14, 1.06), std('#f3f6fb', 0.9));
+  snow.position.y = 6.14;
+  const hole = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.02, 0.56), new THREE.MeshBasicMaterial({ color: '#120806' }));
+  hole.position.y = 6.22;
+  g.add(body, cap, snow, hole);
+
+  const n = 40;
+  const pos = new Float32Array(n * 3);
+  const life = new Float32Array(n).map(() => Math.random());
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const smoke = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#aeb8cc', size: 0.9, map: softDot(), transparent: true, opacity: 0.32, depthWrite: false }));
+  smoke.frustumCulled = false;
+  g.add(smoke);
+  return {
+    group: g,
+    top: new THREE.Vector3(0, 6.25, 0),
+    update(dt, t) {
+      for (let i = 0; i < n; i++) {
+        life[i] += dt * 0.18;
+        if (life[i] > 1) life[i] -= 1;
+        const k = life[i];
+        pos[i * 3] = Math.sin(k * 5 + i) * 0.25 + k * 1.2;
+        pos[i * 3 + 1] = 6.3 + k * 4.5;
+        pos[i * 3 + 2] = Math.cos(k * 4 + i) * 0.25 - k * 0.6;
       }
       geo.attributes.position.needsUpdate = true;
     },

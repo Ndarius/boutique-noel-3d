@@ -2,19 +2,19 @@
 // `model` = nom de la fabrique 3D (voir src/scene/models.js), `opts` = ses options.
 
 export const BRAND = {
-  name: 'Atelier Noël',
-  tagline: 'La boutique 3D de la décoration de Noël',
+  name: 'Mon Sapin de Noël',
+  tagline: 'Le village où commencent les plus beaux Noëls',
 };
 
 export const RAYONS = [
   {
     slug: 'sapins-couronnes',
     number: 1,
-    name: 'Sapins & Couronnes',
+    name: 'La Forêt des Sapins',
     short: 'Sapins',
     accent: '#3f9b6e',
     description:
-      "Des sapins fournis, des couronnes tressées à la main et des guirlandes de branchages pour donner le ton dès l'entrée.",
+      "Ici, ça sent la résine et la neige fraîche. Choisissez le sapin qui trônera au cœur de votre salon, et la couronne qui accueillera vos invités dès la porte.",
     products: [
       {
         slug: 'sapin-nordmann',
@@ -77,11 +77,11 @@ export const RAYONS = [
   {
     slug: 'boules-suspensions',
     number: 2,
-    name: 'Boules & Suspensions',
+    name: "L'Atelier des Boules",
     short: 'Boules',
     accent: '#c8323c',
     description:
-      'Boules soufflées, flocons scintillants et cimes dorées : tout pour habiller le sapin du bout des branches à la pointe.',
+      'Verre soufflé, or pailleté, flocons ciselés : chaque pièce attrape la lumière comme un souvenir. De quoi habiller votre sapin de la première branche jusqu’à l’étoile.',
     products: [
       {
         slug: 'coffret-boules-rouges',
@@ -141,11 +141,11 @@ export const RAYONS = [
   {
     slug: 'lumieres-bougies',
     number: 3,
-    name: 'Lumières & Bougies',
+    name: 'La Fabrique de Lumière',
     short: 'Lumières',
     accent: '#e8b04b',
     description:
-      'Guirlandes LED, lanternes et bougies parfumées : la lumière douce qui fait toute la magie des soirées de décembre.',
+      'C’est ici que le cadeau du Père Noël a rallumé le village. Guirlandes, lanternes et bougies parfumées : emportez un peu de cette lueur chez vous.',
     products: [
       {
         slug: 'guirlande-led-blanc-chaud',
@@ -204,11 +204,11 @@ export const RAYONS = [
   {
     slug: 'creches-figurines',
     number: 4,
-    name: 'Crèches & Figurines',
+    name: 'Le Chalet des Santons',
     short: 'Crèches',
     accent: '#7f8fd6',
     description:
-      'Crèches en bois, santons de tradition et figurines pleines de malice pour raconter la magie de Noël.',
+      'Crèches sculptées, santons de Provence et personnages au regard malicieux : ceux qui racontent l’histoire de Noël aux enfants, année après année.',
     products: [
       {
         slug: 'creche-bois',
@@ -265,11 +265,11 @@ export const RAYONS = [
   {
     slug: 'cadeaux-table',
     number: 5,
-    name: 'Cadeaux & Art de la table',
+    name: 'Le Comptoir des Cadeaux',
     short: 'Cadeaux',
     accent: '#d46a9a',
     description:
-      'Paquets, rubans, chaussettes et vaisselle festive : les derniers détails qui rendent la soirée inoubliable.',
+      'Papiers, rubans, chaussettes à suspendre et table de réveillon : tous les détails qui font qu’on se souvient d’une soirée de Noël.',
     products: [
       {
         slug: 'coffrets-cadeaux',

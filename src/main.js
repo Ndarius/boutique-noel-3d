@@ -6,10 +6,9 @@ import { renderThumbnails } from './scene/thumbnails.js';
 import { ChristmasMusic } from './audio/music.js';
 import { createCart } from './ui/cart.js';
 import * as V from './ui/views.js';
-import { startSantaIntro } from './ui/santaIntro.js';
+import { playIntro, prelude } from './scene/intro.js';
 
 const $ = (s) => document.querySelector(s);
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
 
 const music = new ChristmasMusic();
@@ -22,8 +21,6 @@ let qty = 1;
 let sideKey = '';
 
 // ====================================================================== Écran d'accueil
-const stopSanta = startSantaIntro($('#santa-scene'));
-
 (function loaderSnow() {
   const box = $('.loader-snow');
   for (let i = 0; i < 46; i++) {
@@ -53,29 +50,102 @@ async function boot() {
     progress(1, "Votre navigateur ne prend pas en charge la 3D (WebGL). Essayez avec Chrome, Edge, Firefox ou Safari récents.");
     return;
   }
-  progress(0.08, 'Accrochage des guirlandes…');
-  await Promise.race([document.fonts.load('700 70px "Playfair Display"'), wait(2500)]).catch(() => {});
-  progress(0.3, 'Construction des chalets…');
+  progress(0.25, 'Les flocons se posent sur les toits…');
   await nextFrame();
   world = createWorld($('#scene'), RAYONS);
-  progress(0.65, 'Emballage des cadeaux…');
-  await nextFrame();
-  thumbs = await renderThumbnails(world.products);
-  progress(1, 'Le marché est ouvert !');
+  // les enseignes sont redessinées dès que la police élégante est arrivée (sans bloquer le chargement)
+  document.fonts?.ready.then(() => world.refreshSigns());
+  progress(0.8, 'Les lanternes attendent leur flamme…');
   route = parse(location.pathname);
+  const story = route.view === 'home';
+  if (story) prelude(world);
+  else {
+    $('#enter-label').textContent = `Entrer dans ${route.rayon.name}`;
+    $('#loader-hint').textContent = 'Montez le son 🎧 pour l’ambiance du village';
+    loadThumbnails();
+  }
   renderAll();
   $('#side-panel').classList.add('is-hidden');
+  await nextFrame();
+  progress(1, 'Le village vous attend.');
+  $('#loader').classList.add('ready');
   $('#loader-actions').hidden = false;
   $('#enter-music').focus();
   setupPointer();
 }
 
+// Vignettes des produits : fabriquées en arrière-plan, après l'ouverture
+let thumbsStarted = false;
+function loadThumbnails() {
+  if (thumbsStarted) return;
+  thumbsStarted = true;
+  const run = () =>
+    renderThumbnails(world.products).then((m) => {
+      thumbs = m;
+      sideKey = '';
+      renderAll();
+      if (cartOpen()) $('#cart-drawer').innerHTML = V.cartDrawer(cart, thumbs);
+    });
+  if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 1200 });
+  else setTimeout(run, 300);
+}
+
+// ---------------------------------------------------------------- Séquence d'ouverture
+let introCtl = null;
+function startStory() {
+  document.body.classList.add('cinematic');
+  const cinema = $('#cinema');
+  cinema.hidden = false;
+  requestAnimationFrame(() => cinema.classList.add('on'));
+  const cap = $('#caption');
+  introCtl = playIntro(world, {
+    isMobile,
+    overview: world.views.overview(),
+    on: {
+      caption(html) {
+        cap.classList.remove('show');
+        if (html) {
+          setTimeout(() => {
+            cap.innerHTML = html;
+            cap.classList.add('show');
+          }, 350);
+        }
+      },
+      bells: (d) => music.sleighPass(d),
+      chime: () => music.chime(),
+      title: () => $('#title-card').classList.add('show'),
+      done(look) {
+        introCtl = null;
+        world.releaseCamera(look);
+        $('#skip').hidden = true;
+        $('#title-card').classList.add('show');
+        setTimeout(() => {
+          // le titre s'efface d'abord, puis l'interface apparaît
+          $('#title-card').classList.remove('show');
+          cinema.classList.remove('on');
+          setTimeout(() => {
+            document.body.classList.remove('cinematic');
+            entered = true;
+            renderAll();
+            loadThumbnails();
+          }, 700);
+          setTimeout(() => (cinema.hidden = true), 1300);
+        }, 1600);
+      },
+    },
+  });
+}
+$('#skip').addEventListener('click', () => introCtl?.skip());
+
 function enter(withMusic) {
-  if (entered) return;
-  entered = true;
+  if (entered || introCtl) return;
   if (withMusic) music.start();
   $('#loader').classList.add('gone');
-  setTimeout(stopSanta, 1000);
+  if (route.view === 'home') {
+    startStory();
+    return;
+  }
+  entered = true;
   world.stopIntro();
   applyRoute(parse(location.pathname), { first: true });
 }
@@ -157,7 +227,7 @@ function updateTitle() {
     meta.content = r.rayon.description;
   } else {
     document.title = `${BRAND.name} — ${BRAND.tagline}`;
-    meta.content = 'Promenez-vous dans notre marché de Noël en 3D : 5 rayons de décorations — sapins, boules, lumières, crèches et cadeaux.';
+    meta.content = 'Cette nuit, le Père Noël a rallumé le village. Entrez dans cinq chalets en 3D et choisissez sapins, boules, lumières, crèches et cadeaux.';
   }
 }
 
@@ -330,6 +400,7 @@ document.addEventListener('pointerout', (e) => {
 
 // ---------------------------------------------------------------- Clavier
 addEventListener('keydown', (e) => {
+  if (introCtl && e.key === 'Escape') return introCtl.skip();
   if (!entered) {
     if (e.key === 'Enter' && !$('#loader-actions').hidden && document.activeElement === document.body) enter(true);
     return;

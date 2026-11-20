@@ -261,6 +261,25 @@ export class ChristmasMusic {
     src.start(t, Math.random() * 0.5, 0.2);
   }
 
+  // Grelots du traîneau qui passent (montée, plein, descente)
+  sleighPass(duration = 10) {
+    if (!this.ctx || !this.enabled) return;
+    const t0 = this.ctx.currentTime + 0.05;
+    const steps = Math.floor(duration / 0.09);
+    for (let i = 0; i < steps; i++) {
+      const k = i / steps;
+      const env = Math.sin(Math.PI * Math.min(1, k * 1.15)) ** 1.5;
+      this.sleigh(t0 + i * 0.09 + Math.random() * 0.02, 0.02 + env * 0.11);
+    }
+  }
+
+  // Carillon magique : arpège qui monte quand le cadeau touche la cheminée
+  chime() {
+    if (!this.ctx || !this.enabled) return;
+    const t = this.ctx.currentTime + 0.02;
+    [72, 76, 79, 84, 88, 91, 96].forEach((n, i) => this.bell(n, t + i * 0.07, 0.6, 0.22));
+  }
+
   // Petit « ding » quand on ajoute au panier
   ding() {
     if (!this.ctx || !this.enabled) return;

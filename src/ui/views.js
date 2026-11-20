@@ -42,16 +42,16 @@ function sheetHead(title, sub) {
 
 export function homePanel() {
   const total = RAYONS.reduce((n, r) => n + r.products.length, 0);
-  return `${sheetHead('Plan du marché', `5 rayons · ${total} articles`)}
+  return `${sheetHead('Le village', `5 chalets · ${total} trésors`)}
   <div class="panel-scroll">
-    <p class="eyebrow">Bienvenue au marché</p>
-    <h1>Toute la décoration de Noël, en 3D</h1>
-    <p class="lead">Flânez entre nos cinq chalets, approchez-vous des étagères et choisissez vos décorations comme en boutique.</p>
+    <p class="eyebrow">Le village est réveillé</p>
+    <h1>Cinq chalets.<br>Un Noël à composer.</h1>
+    <p class="lead">Chaque chalet garde une partie de la magie. Poussez la porte, approchez-vous des étagères et emportez ce qui fera briller votre maison.</p>
     <ul class="rayon-list">
       ${RAYONS.map(
         (r) => `<li><a class="rayon-card" href="${rayonUrl(r)}" data-link data-rayon="${r.slug}" style="--accent:${r.accent}">
           <span class="num">${r.number}</span>
-          <span><strong>${r.name}</strong><small>Rayon ${r.number} · ${r.products.length} articles</small></span>
+          <span><strong>${r.name}</strong><small>Chalet ${r.number} · ${r.products.length} trésors</small></span>
           <span class="arrow">${ico.arrowR}</span></a></li>`,
       ).join('')}
     </ul>
@@ -68,10 +68,10 @@ export function rayonPanel(rayon, thumbs, activeSlug) {
   const i = RAYONS.indexOf(rayon);
   const prev = RAYONS[(i + RAYONS.length - 1) % RAYONS.length];
   const next = RAYONS[(i + 1) % RAYONS.length];
-  return `${sheetHead(rayon.name, `Rayon ${rayon.number} sur ${RAYONS.length} · ${rayon.products.length} articles`)}
+  return `${sheetHead(rayon.name, `Chalet ${rayon.number} sur ${RAYONS.length} · ${rayon.products.length} trésors`)}
   <div class="panel-scroll" style="--accent:${rayon.accent}">
-    <a href="/" data-link class="back-link">${ico.arrowL} Plan du marché</a>
-    <p class="eyebrow">Rayon ${rayon.number} sur ${RAYONS.length}</p>
+    <a href="/" data-link class="back-link">${ico.arrowL} Retour au village</a>
+    <p class="eyebrow">Chalet ${rayon.number} sur ${RAYONS.length}</p>
     <h2>${rayon.name}</h2>
     <p class="lead">${rayon.description}</p>
     <div class="address">
@@ -82,7 +82,7 @@ export function rayonPanel(rayon, thumbs, activeSlug) {
       ${rayon.products.map(
         (p) => `<a class="prod-card" href="${productUrl(rayon, p)}" data-link data-product="${p.slug}" ${p.slug === activeSlug ? 'aria-current="true"' : ''}>
           ${p.badge ? `<span class="tag">${p.badge}</span>` : ''}
-          <span class="thumb">${img(thumbs, p)}</span>
+          <span class="thumb${thumbs.has(p.slug) ? '' : ' loading'}">${img(thumbs, p)}</span>
           <span class="name">${p.name}</span>
           <span class="price">${formatPrice(p.price)}</span></a>`,
       ).join('')}
