@@ -143,7 +143,7 @@ body.hovering #scene canvas { cursor: pointer; }
   box-shadow: var(--shadow);
 }
 .side-panel {
-  top: calc(var(--topbar-h) + 10px); left: 20px; bottom: 96px; width: 370px;
+  top: calc(var(--topbar-h) + 10px); left: 20px; width: 370px; max-height: calc(100% - var(--topbar-h) - 112px);
   display: flex; flex-direction: column; overflow: hidden;
   transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s;
 }
@@ -295,7 +295,7 @@ body.hovering #scene canvas { cursor: pointer; }
 .total strong { font-family: var(--serif); font-size: 26px; color: var(--gold); }
 
 /* ------------------------------------------------------------ Mobile */
-@media (max-width: 1100px) {
+@media (max-width: 920px) {
   .rayon-nav a .label { display: none; }
   .rayon-nav a { padding: 8px 10px; }
 }
@@ -460,3 +460,103 @@ body.cinematic .topbar, body.cinematic .dock, body.cinematic .panel { opacity: 0
 /* Vignettes en cours de fabrication */
 .thumb.loading { background: linear-gradient(100deg, rgba(255,255,255,.03) 30%, rgba(255,255,255,.1) 50%, rgba(255,255,255,.03) 70%) 0 0 / 200% 100%; animation: shimmer 1.4s linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
+
+/* =================================================================== Menus : nouvelle harmonie
+   Fond nuit profonde opaque (lisible quel que soit le décor derrière), filet de la
+   couleur du chalet, or « champagne » réservé aux prix et aux petits titres. */
+:root {
+  --panel-bg: linear-gradient(180deg, rgba(20, 31, 54, 0.96), rgba(12, 20, 37, 0.96));
+  --panel-line: rgba(255, 255, 255, 0.08);
+  --champagne: #f1dcab;
+  --card-bg: rgba(255, 255, 255, 0.035);
+  --card-hover: rgba(255, 255, 255, 0.075);
+}
+.panel { background: var(--panel-bg); border-color: var(--panel-line); }
+.side-panel { --accent: var(--gold); }
+.side-panel::before, .product-panel::before {
+  content: ''; position: absolute; top: 0; left: 22px; right: 22px; height: 3px; border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.panel .eyebrow { color: color-mix(in srgb, var(--accent) 55%, #fff4dc); }
+.panel h1, .panel h2 { color: #fbf6ec; }
+.panel p.lead, .product-panel .desc { color: #b9c1d4; }
+.prod-card, .rayon-card { background: var(--card-bg); border-color: var(--panel-line); }
+.prod-card:hover, .prod-card.hl, .rayon-card:hover, .rayon-card.hl { background: var(--card-hover); }
+.prod-card:hover, .prod-card.hl { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.prod-card[aria-current='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.prod-card .price, .product-panel .price-big, .cart-item .p, .total strong { color: var(--champagne); }
+.prod-card .price { font-weight: 600; }
+.thumb { background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--accent) 22%, transparent), rgba(255, 255, 255, 0.02) 72%); }
+.address { background: rgba(0, 0, 0, 0.28); border-color: var(--panel-line); }
+.address code { color: var(--champagne); }
+.pager a { border-color: var(--panel-line); }
+.pager a:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.back-link:hover { color: var(--champagne); }
+.btn-gold { background: linear-gradient(135deg, #f6e1b0, #d9ab4a); }
+
+/* Bouton pour replier le menu (ordinateur) */
+.panel-toggle {
+  position: absolute; top: 14px; right: 14px; z-index: 2; width: 34px; height: 34px; border-radius: 10px;
+  display: grid; place-items: center; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--panel-line); color: #cfd5e3;
+}
+.panel-toggle:hover { color: #fff; border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.panel-toggle svg { width: 18px; height: 18px; }
+.side-panel .panel-scroll > :is(.back-link, .eyebrow:first-child) { margin-right: 44px; }
+.side-panel.collapsed:not(.is-hidden) { transform: translateX(calc(-100% - 30px)); opacity: 0; pointer-events: none; }
+
+/* Languette pour faire ressortir le menu */
+.panel-tab {
+  position: fixed; z-index: 11; left: 0; top: calc(var(--topbar-h) + 18px);
+  display: flex; align-items: center; gap: 8px; padding: 12px 16px 12px 14px; border-radius: 0 14px 14px 0;
+  background: var(--panel-bg); border: 1px solid var(--panel-line); border-left: 3px solid var(--accent, var(--gold));
+  color: #f3f0e8; font-size: 13.5px; font-weight: 600; box-shadow: var(--shadow); animation: tabIn 0.4s ease both;
+}
+.panel-tab:hover { padding-left: 18px; }
+.panel-tab svg { width: 18px; height: 18px; color: var(--accent, var(--gold)); }
+@keyframes tabIn { from { transform: translateX(-100%); } }
+
+/* Panier : s'adapte à toutes les largeurs */
+.cart-drawer { padding-top: env(safe-area-inset-top, 0px); }
+.cart-item { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.cart-item .n { line-height: 1.3; overflow-wrap: anywhere; }
+.cart-item .p { white-space: nowrap; }
+.cart-foot .btn-block { min-height: 52px; }
+
+@media (max-width: 760px) {
+  .panel-toggle { display: none; }
+  .side-panel .panel-scroll > :is(.back-link, .eyebrow:first-child) { margin-right: 0; }
+  .side-panel.collapsed:not(.is-hidden) { transform: none; opacity: 1; pointer-events: auto; }
+  .panel-tab { display: none; }
+  .side-panel::before, .product-panel::before { left: 30%; right: 30%; }
+  .cart-drawer { width: 100%; border-left: 0; }
+  .cart-head { padding: 16px 16px 12px; }
+  .cart-head h2 { font-size: 23px; }
+  .cart-items { padding: 4px 16px; }
+  .cart-foot { padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 400px) {
+  .cart-item { grid-template-columns: 54px minmax(0, 1fr); row-gap: 8px; }
+  .cart-item .thumb { width: 54px; }
+  .cart-item > div:last-child { grid-column: 2; display: flex; align-items: center; justify-content: space-between; }
+  .cart-item .rm { margin: 0; }
+}
+
+.gl-lost { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(5, 9, 20, 0.9); text-align: center; }
+.gl-lost > div { max-width: 380px; }
+.gl-lost h2 { font-family: var(--serif); font-size: 26px; margin: 0 0 10px; }
+.gl-lost p:not(.eyebrow) { color: #b9c1d4; margin: 0 0 20px; }
+
+@media (max-width: 760px) {
+  .side-panel .panel-scroll > .eyebrow { display: none; }
+}
+@media (max-width: 400px) {
+  .topbar { gap: 6px; padding: 0 10px; }
+  .actions { gap: 6px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 12px; }
+  .brand { gap: 8px; }
+  .brand-mark { width: 32px; height: 32px; }
+  .brand-name { font-size: 17px; }
+}
+@media (max-width: 340px) {
+  .brand-name em { display: none; }
+}

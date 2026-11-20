@@ -16,15 +16,19 @@ const BASE = 0.25; // hauteur de l'estrade
 const SHELVES = [1.0, 2.05];
 const SLOTS_X = [-2.1, 0, 2.1];
 
+// isMobile = appareil modeste (téléphone, tablette) → on allège le rendu.
+// isNarrow() = écran étroit → mise en page et cadrages « téléphone ».
 export const isMobile = matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+export const isNarrow = () => matchMedia('(max-width: 760px)').matches;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
 export function createWorld(container, rayons) {
   // ---------------------------------------------------------------- Rendu
-  const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
+  const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true, powerPreference: 'high-performance' });
+  renderer.setClearColor(0x000000, 1);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.25 : 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -39,7 +43,7 @@ export function createWorld(container, rayons) {
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.32;
 
-  const camera = new THREE.PerspectiveCamera(isMobile ? 62 : 50, container.clientWidth / container.clientHeight, 0.1, 400);
+  const camera = new THREE.PerspectiveCamera(isNarrow() ? 62 : 50, container.clientWidth / container.clientHeight, 0.1, 400);
   camera.position.set(0, 34, 70);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -285,27 +289,40 @@ export function createWorld(container, rayons) {
   }
 
   // Sur ordinateur, on décale légèrement le cadrage pour laisser la place au panneau de gauche.
+  // Recul nécessaire pour que `halfWidth` mètres tiennent dans la largeur de l'écran
+  const fitDist = (halfWidth, base) => {
+    const hfov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
+    return Math.max(base, halfWidth / Math.tan(hfov / 2));
+  };
   const views = {
+    panelOpen: true, // le menu de gauche est-il déplié ? (décale le cadrage)
+    get narrow() {
+      return isNarrow();
+    },
     overview() {
-      return isMobile
+      return isNarrow()
         ? { pos: new THREE.Vector3(0, 30, 50), target: new THREE.Vector3(0, -5, -6) }
-        : { pos: new THREE.Vector3(-4.5, 16, 33), target: new THREE.Vector3(-4.5, 1.5, -5) };
+        : (() => {
+            const k = Math.max(1, fitDist(24, 38) / 38);
+            const x = views.panelOpen ? -4.5 : 0;
+            return { pos: new THREE.Vector3(x, 16 * k, 33 * k), target: new THREE.Vector3(x, 1.5, -5) };
+          })();
     },
     chalet(chalet) {
       const n = chalet.inward;
       const side = new THREE.Vector3(n.z, 0, -n.x);
-      const shift = side.multiplyScalar(isMobile ? 0 : -1.5);
+      const shift = side.multiplyScalar(isNarrow() || !views.panelOpen ? 0 : -1.5);
       return {
-        pos: chalet.pos.clone().add(n.clone().multiplyScalar(isMobile ? 11 : 6.9)).setY(isMobile ? 3.6 : 2.5).add(shift),
-        target: chalet.pos.clone().add(n.clone().multiplyScalar(0.3)).setY(isMobile ? -0.4 : 2.15).add(shift),
+        pos: chalet.pos.clone().add(n.clone().multiplyScalar(isNarrow() ? 11 : fitDist(4.6, 6.9))).setY(isNarrow() ? 3.6 : 2.5).add(shift),
+        target: chalet.pos.clone().add(n.clone().multiplyScalar(0.3)).setY(isNarrow() ? -0.4 : 2.15).add(shift),
       };
     },
     product(entry) {
       const n = entry.chalet.inward;
       const p = entry.world.clone().add(new THREE.Vector3(0, 0.32, 0));
       return {
-        pos: p.clone().add(n.clone().multiplyScalar(isMobile ? 3.3 : 2.9)).add(new THREE.Vector3(0, isMobile ? 0.6 : 0.4, 0)),
-        target: p.clone().add(new THREE.Vector3(0, isMobile ? -0.9 : 0, 0)),
+        pos: p.clone().add(n.clone().multiplyScalar(isNarrow() ? 3.3 : fitDist(1.3, 2.9))).add(new THREE.Vector3(0, isNarrow() ? 0.6 : 0.4, 0)),
+        target: p.clone().add(new THREE.Vector3(0, isNarrow() ? -0.9 : 0, 0)),
       };
     },
   };
@@ -391,6 +408,7 @@ export function createWorld(container, rayons) {
     const w = container.clientWidth;
     const h = container.clientHeight;
     camera.aspect = w / h;
+    camera.fov = isNarrow() ? 62 : 50;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
     composer.setSize(w, h);
@@ -433,9 +451,17 @@ export function createWorld(container, rayons) {
   // Précompile les shaders pour éviter les à-coups au premier affichage
   renderer.compileAsync?.(scene, camera).catch(() => {});
 
+  // Si le téléphone coupe la 3D (mémoire saturée), on prévient l'interface.
+  let onLost = null;
+  renderer.domElement.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    onLost?.();
+  });
+
   frame();
 
   return {
+    onContextLost: (fn) => (onLost = fn),
     setIllumination,
     refreshSigns() {
       for (const c of chalets) {

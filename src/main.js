@@ -1,7 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { RAYONS, BRAND, findRayon, findProduct, formatPrice } from './data/catalog.js';
-import { createWorld, isMobile } from './scene/world.js';
+import { createWorld, isMobile, isNarrow } from './scene/world.js';
 import { renderThumbnails } from './scene/thumbnails.js';
 import { ChristmasMusic } from './audio/music.js';
 import { createCart } from './ui/cart.js';
@@ -53,8 +53,12 @@ async function boot() {
   progress(0.25, 'Les flocons se posent sur les toits…');
   await nextFrame();
   world = createWorld($('#scene'), RAYONS);
+  world.views.panelOpen = !panelCollapsed;
   // les enseignes sont redessinées dès que la police élégante est arrivée (sans bloquer le chargement)
   document.fonts?.ready.then(() => world.refreshSigns());
+  world.onContextLost(() => {
+    $('#gl-lost').hidden = false;
+  });
   progress(0.8, 'Les lanternes attendent leur flamme…');
   route = parse(location.pathname);
   const story = route.view === 'home';
@@ -79,15 +83,12 @@ let thumbsStarted = false;
 function loadThumbnails() {
   if (thumbsStarted) return;
   thumbsStarted = true;
-  const run = () =>
-    renderThumbnails(world.products).then((m) => {
-      thumbs = m;
-      sideKey = '';
-      renderAll();
-      if (cartOpen()) $('#cart-drawer').innerHTML = V.cartDrawer(cart, thumbs);
-    });
-  if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 1200 });
-  else setTimeout(run, 300);
+  renderThumbnails(world, world.products).then((m) => {
+    thumbs = m;
+    sideKey = '';
+    renderAll();
+    if (cartOpen()) $('#cart-drawer').innerHTML = V.cartDrawer(cart, thumbs);
+  });
 }
 
 // ---------------------------------------------------------------- Séquence d'ouverture
@@ -196,18 +197,18 @@ function applyRoute(next, { first = false } = {}) {
   moveCamera(prev, next, first);
 }
 
-function moveCamera(prev, next, first) {
+function moveCamera(prev, next, first, forced) {
   if (!world) return;
   const chalet = next.rayon && world.chalets.find((c) => c.rayon === next.rayon);
   const sameRayon = prev.rayon && prev.rayon === next.rayon;
   if (next.view === 'home') {
     world.setSelected(null);
     const v = world.views.overview();
-    world.flyTo(v.pos, v.target, { mode: 'overview', duration: first ? 3.2 : 2.2 });
+    world.flyTo(v.pos, v.target, { mode: 'overview', duration: forced || (first ? 3.2 : 2.2) });
   } else if (next.view === 'rayon') {
     world.setSelected(null);
     const v = world.views.chalet(chalet);
-    world.flyTo(v.pos, v.target, { mode: 'chalet', duration: first ? 3.4 : sameRayon ? 1.2 : 2.3 });
+    world.flyTo(v.pos, v.target, { mode: 'chalet', duration: forced || (first ? 3.4 : sameRayon ? 1.2 : 2.3) });
   } else {
     const entry = world.products.find((p) => p.product === next.product && p.rayon === next.rayon);
     world.setSelected(entry);
@@ -248,7 +249,12 @@ function renderAll() {
     if (keepScroll) side.querySelector('.panel-scroll').scrollTop = scroll;
     sideKey = key;
   }
-  side.classList.toggle('is-hidden', !entered || (isMobile && route.view === 'product'));
+  side.classList.toggle('is-hidden', !entered || (isNarrow() && route.view === 'product'));
+  side.classList.toggle('collapsed', panelCollapsed);
+  const accent = route.rayon?.accent || '#e8c27a';
+  side.style.setProperty('--accent', accent);
+  $('#product-panel').style.setProperty('--accent', accent);
+  updatePanelTab();
 
   const pp = $('#product-panel');
   if (route.view === 'product') {
@@ -273,6 +279,22 @@ function updateCartBadge(bump = true) {
     b.classList.add('bump');
   }
 }
+
+// ---------------------------------------------------------------- Menu repliable
+let panelCollapsed = false;
+try {
+  panelCollapsed = localStorage.getItem('msdn-menu-replie') === '1';
+} catch {
+  /* stockage indisponible */
+}
+function updatePanelTab() {
+  const tab = $('#panel-tab');
+  const show = entered && panelCollapsed && !isNarrow() && !document.body.classList.contains('cinematic');
+  tab.hidden = !show;
+  tab.style.setProperty('--accent', route.rayon?.accent || '#e8c27a');
+  $('#panel-tab-label').textContent = route.rayon ? `Chalet ${route.rayon.number} · ${route.rayon.short}` : 'Le village';
+}
+addEventListener('resize', () => updatePanelTab());
 
 let toastTimer;
 function toast(msg) {
@@ -377,7 +399,19 @@ document.addEventListener('click', async (e) => {
   } else if (action === 'checkout') {
     toast('Boutique de démonstration : le paiement en ligne n’est pas encore branché.');
   } else if (action === 'toggle-sheet') {
-    $('#side-panel').classList.toggle('collapsed');
+    panelCollapsed = !panelCollapsed;
+    try {
+      localStorage.setItem('msdn-menu-replie', panelCollapsed ? '1' : '0');
+    } catch {
+      /* préférence non mémorisée */
+    }
+    $('#side-panel').classList.toggle('collapsed', panelCollapsed);
+    updatePanelTab();
+    // recadre la scène pour occuper la place libérée (ou laisser la place au menu)
+    if (entered && !isNarrow() && route.view !== 'product') {
+      world.views.panelOpen = !panelCollapsed;
+      moveCamera(route, route, false, 1.1);
+    }
   }
 });
 
@@ -461,7 +495,7 @@ function setupPointer() {
         tip.innerHTML = `<strong>Rayon ${t.chalet.rayon.number} · ${t.chalet.rayon.name}</strong><span>Cliquer pour entrer</span>`;
       }
     }
-    tip.hidden = !t || isMobile;
+    tip.hidden = !t || isNarrow() || matchMedia('(pointer: coarse)').matches;
     if (t) {
       tip.style.left = `${x}px`;
       tip.style.top = `${y}px`;

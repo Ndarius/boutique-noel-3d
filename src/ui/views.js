@@ -12,6 +12,7 @@ const ico = {
   link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
   check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-11"/></svg>',
   close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  collapse: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>',
   bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>',
   gift: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8S10 3 7.5 4.5 9 8 12 8zm0 0s2-5 4.5-3.5S15 8 12 8z"/></svg>',
@@ -36,7 +37,8 @@ export function dockDots(current) {
 }
 
 function sheetHead(title, sub) {
-  return `<button class="panel-head" data-action="toggle-sheet" aria-label="Afficher ou masquer le panneau">
+  return `<button class="panel-toggle" data-action="toggle-sheet" aria-label="Replier le menu" title="Replier le menu">${ico.collapse}</button>
+  <button class="panel-head" data-action="toggle-sheet" aria-label="Afficher ou masquer le panneau">
     <span><span class="t">${title}</span><br><span class="s">${sub}</span></span>${ico.chevron}</button>`;
 }
 
