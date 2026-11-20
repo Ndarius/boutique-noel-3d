@@ -92,7 +92,7 @@ function parse(path) {
     return { view: 'rayon', rayon };
   }
   if (parts[0] === 'panier') return { view: 'home', cart: true };
-  return { view: 'home', notFound: true };
+  return { view: 'home' };
 }
 
 const canonical = (r) => (r.view === 'product' ? V.productUrl(r.rayon, r.product) : r.view === 'rayon' ? V.rayonUrl(r.rayon) : '/');
