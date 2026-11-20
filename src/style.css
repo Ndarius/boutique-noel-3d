@@ -375,3 +375,22 @@ body.hovering #scene canvas { cursor: pointer; }
   .side-panel .panel-scroll > h2,
   .side-panel .panel-scroll > .lead { display: none; }
 }
+
+/* ------------------------------------------------------------ Traîneau du chargement */
+.loader-card { max-width: 600px; }
+.santa-scene { width: min(560px, 100%); margin: 0 auto 6px; aspect-ratio: 600 / 270; }
+.santa-svg { width: 100%; height: 100%; overflow: visible; stroke: none; fill: currentColor; }
+.santa-svg .si-legs-a path, .santa-svg .si-legs-b path { stroke: #6e4630; stroke-width: 4; stroke-linecap: round; fill: none; }
+.santa-svg .si-legs-a, .santa-svg .si-legs-b { transform-box: fill-box; transform-origin: 50% 0; animation: gallop 0.42s ease-in-out infinite alternate; }
+.santa-svg .si-legs-b { animation-direction: alternate-reverse; }
+.santa-svg .si-antler { stroke: #e3cfa8; stroke-width: 2.2; stroke-linecap: round; fill: none; }
+.santa-svg .si-rein { stroke: #e8c27a; stroke-width: 1.3; fill: none; opacity: 0.85; }
+.santa-svg .si-nose { fill: #ff3b3b; filter: drop-shadow(0 0 4px #ff5050); animation: nose 1.2s ease-in-out infinite; }
+.santa-svg .si-sleigh { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); }
+@keyframes gallop { from { transform: rotate(-16deg); } to { transform: rotate(18deg); } }
+@keyframes nose { 50% { filter: drop-shadow(0 0 9px #ff6060); } }
+#loader h1 { font-size: clamp(40px, 8vw, 62px); }
+@media (max-width: 760px) {
+  .santa-scene { margin-bottom: 0; }
+  .loader-sub { margin: 10px auto 20px; }
+}

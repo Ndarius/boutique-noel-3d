@@ -50,6 +50,49 @@ const SONGS = [
   },
 ];
 
+// Sur iPhone / iPad, le bouton « silencieux » coupe la Web Audio API.
+// On déclare une lecture de type « média » pour que la musique reste audible,
+// comme une vidéo : API audioSession (Safari 16.4+) et, en secours, un élément
+// <audio> silencieux en boucle qui fait passer la page en mode lecture.
+let mediaUnlocked = false;
+function unlockMediaPlayback() {
+  if (mediaUnlocked) return;
+  mediaUnlocked = true;
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+  } catch {
+    /* non pris en charge */
+  }
+  try {
+    const rate = 8000;
+    const samples = rate / 2;
+    const buf = new ArrayBuffer(44 + samples * 2);
+    const v = new DataView(buf);
+    const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF');
+    v.setUint32(4, 36 + samples * 2, true);
+    str(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true);
+    v.setUint32(28, rate * 2, true);
+    v.setUint16(32, 2, true);
+    v.setUint16(34, 16, true);
+    str(36, 'data');
+    v.setUint32(40, samples * 2, true);
+    const el = document.createElement('audio');
+    el.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    el.loop = true;
+    el.setAttribute('playsinline', '');
+    el.setAttribute('x-webkit-airplay', 'deny');
+    el.volume = 0.01;
+    el.play().catch(() => {});
+  } catch {
+    /* sans importance si indisponible */
+  }
+}
+
 export class ChristmasMusic {
   constructor() {
     this.ctx = null;
@@ -70,13 +113,27 @@ export class ChristmasMusic {
     if (this.ctx) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    const ctx = (this.ctx = new AC());
+    unlockMediaPlayback();
+    const ctx = (this.ctx = new AC({ latencyHint: 'playback' }));
     this.master = ctx.createGain();
     this.master.gain.value = 0;
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -18;
-    comp.ratio.value = 3;
-    this.master.connect(comp).connect(ctx.destination);
+    comp.threshold.value = -16;
+    comp.knee.value = 8;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.005;
+    comp.release.value = 0.2;
+    const makeup = ctx.createGain();
+    makeup.gain.value = 1.45; // volume général plus présent
+    this.master.connect(comp).connect(makeup).connect(ctx.destination);
+
+    // Le navigateur peut suspendre le son (onglet en arrière-plan, appel sur mobile…) :
+    // on le relance à la prochaine interaction ou au retour sur la page.
+    const wake = () => {
+      if (this.enabled && ctx.state !== 'running') ctx.resume();
+    };
+    ['pointerdown', 'keydown', 'touchend'].forEach((ev) => document.addEventListener(ev, wake, { passive: true }));
+    document.addEventListener('visibilitychange', () => !document.hidden && wake());
     this.dry = ctx.createGain();
     this.dry.gain.value = 0.8;
     this.dry.connect(this.master);
@@ -129,7 +186,7 @@ export class ChristmasMusic {
   }
 
   // Timbre de clochette / célesta
-  bell(note, t, dur, vel = 0.22) {
+  bell(note, t, dur, vel = 0.32) {
     const { ctx } = this;
     const f = midi(note);
     const env = ctx.createGain();
@@ -157,8 +214,8 @@ export class ChristmasMusic {
     lp.frequency.value = 1100;
     const env = ctx.createGain();
     env.gain.setValueAtTime(0.0001, t);
-    env.gain.linearRampToValueAtTime(0.045, t + 0.35);
-    env.gain.setValueAtTime(0.045, t + dur - 0.1);
+    env.gain.linearRampToValueAtTime(0.06, t + 0.35);
+    env.gain.setValueAtTime(0.06, t + dur - 0.1);
     env.gain.linearRampToValueAtTime(0.0001, t + dur + 0.6);
     lp.connect(env);
     this.out(env, 0.7);

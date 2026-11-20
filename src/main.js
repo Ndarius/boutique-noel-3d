@@ -6,6 +6,7 @@ import { renderThumbnails } from './scene/thumbnails.js';
 import { ChristmasMusic } from './audio/music.js';
 import { createCart } from './ui/cart.js';
 import * as V from './ui/views.js';
+import { startSantaIntro } from './ui/santaIntro.js';
 
 const $ = (s) => document.querySelector(s);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -21,6 +22,8 @@ let qty = 1;
 let sideKey = '';
 
 // ====================================================================== Écran d'accueil
+const stopSanta = startSantaIntro($('#santa-scene'));
+
 (function loaderSnow() {
   const box = $('.loader-snow');
   for (let i = 0; i < 46; i++) {
@@ -72,6 +75,7 @@ function enter(withMusic) {
   entered = true;
   if (withMusic) music.start();
   $('#loader').classList.add('gone');
+  setTimeout(stopSanta, 1000);
   world.stopIntro();
   applyRoute(parse(location.pathname), { first: true });
 }
