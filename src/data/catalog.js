@@ -1,3 +1,5 @@
+// Lien d'achat : ajoutez `lien: 'https://…'` à un produit et le bouton
+// « Acheter » de sa fiche ouvrira ce lien (sinon : « Ajouter au panier »).
 // Catalogue de la boutique : 5 rayons, chacun avec sa propre adresse (/rayon/<slug>)
 // `model` = nom de la fabrique 3D (voir src/scene/models.js), `opts` = ses options.
 
@@ -334,3 +336,4 @@ export const allProducts = () =>
 
 export const formatPrice = (n) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
+

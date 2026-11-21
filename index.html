@@ -31,14 +31,6 @@
           <div class="bar"><span id="loader-bar"></span></div>
           <p id="loader-status">Le village s’endort…</p>
         </div>
-        <div class="loader-actions" id="loader-actions" hidden>
-          <button class="btn btn-gold" id="enter-music">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
-            <span id="enter-label">Commencer l’histoire</span>
-          </button>
-          <button class="btn btn-ghost" id="enter-silent">Sans le son</button>
-        </div>
-        <p class="loader-hint" id="loader-hint">Montez le son 🎧 · 15 secondes de magie, puis le village est à vous</p>
       </div>
     </div>
 
@@ -102,6 +94,18 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
       </button>
     </div>
+
+    <nav class="tabbar" id="tabbar" aria-label="Navigation principale">
+      <a href="/" data-link class="tab" data-tab="village">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 7 10h3l-4 6h12l-4-6h3z"/><path d="M12 16v4"/></svg><span>Village</span>
+      </a>
+      <button class="tab" data-tab="boutique" data-action="open-shop">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16l-1-5H5z"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg><span>Boutique</span>
+      </button>
+      <button class="tab" data-tab="panier" data-action="open-cart">
+        <span class="tab-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><b class="badge" id="tab-cart-count" hidden>0</b></span><span>Panier</span>
+      </button>
+    </nav>
 
     <div id="tooltip" role="tooltip" hidden></div>
 

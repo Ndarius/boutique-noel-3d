@@ -61,21 +61,24 @@ async function boot() {
   });
   progress(0.8, 'Les lanternes attendent leur flamme…');
   route = parse(location.pathname);
-  const story = route.view === 'home';
-  if (story) prelude(world);
-  else {
-    $('#enter-label').textContent = `Entrer dans ${route.rayon.name}`;
-    $('#loader-hint').textContent = 'Montez le son 🎧 pour l’ambiance du village';
-    loadThumbnails();
+  let seen = false;
+  try {
+    seen = localStorage.getItem('msdn-histoire-vue') === '1';
+  } catch {
+    /* première visite par défaut */
   }
+  // L'histoire n'est jouée qu'à la première visite de l'accueil
+  playStory = route.view === 'home' && !seen;
+  if (playStory) prelude(world);
+  else loadThumbnails();
   renderAll();
   $('#side-panel').classList.add('is-hidden');
   await nextFrame();
   progress(1, 'Le village vous attend.');
   $('#loader').classList.add('ready');
-  $('#loader-actions').hidden = false;
-  $('#enter-music').focus();
   setupPointer();
+  // Entrée directe, en muet : la musique s'active avec le bouton 🔈
+  setTimeout(() => enter(false), 350);
 }
 
 // Vignettes des produits : fabriquées en arrière-plan, après l'ouverture
@@ -93,6 +96,7 @@ function loadThumbnails() {
 
 // ---------------------------------------------------------------- Séquence d'ouverture
 let introCtl = null;
+let playStory = false;
 function startStory() {
   document.body.classList.add('cinematic');
   const cinema = $('#cinema');
@@ -117,6 +121,11 @@ function startStory() {
       title: () => $('#title-card').classList.add('show'),
       done(look) {
         introCtl = null;
+        try {
+          localStorage.setItem('msdn-histoire-vue', '1');
+        } catch {
+          /* non mémorisé */
+        }
         world.releaseCamera(look);
         $('#skip').hidden = true;
         $('#title-card').classList.add('show');
@@ -141,8 +150,9 @@ $('#skip').addEventListener('click', () => introCtl?.skip());
 function enter(withMusic) {
   if (entered || introCtl) return;
   if (withMusic) music.start();
+  else setTimeout(() => !music.enabled && soundBtn.classList.add('invite'), 1500);
   $('#loader').classList.add('gone');
-  if (route.view === 'home') {
+  if (playStory) {
     startStory();
     return;
   }
@@ -150,8 +160,6 @@ function enter(withMusic) {
   world.stopIntro();
   applyRoute(parse(location.pathname), { first: true });
 }
-$('#enter-music').addEventListener('click', () => enter(true));
-$('#enter-silent').addEventListener('click', () => enter(false));
 
 // ====================================================================== Routeur (une adresse par rayon)
 function parse(path) {
@@ -245,16 +253,19 @@ function renderAll() {
   if (key !== sideKey) {
     const keepScroll = sideKey.startsWith(`rayon:${current}:`) && route.view !== 'home';
     const scroll = side.querySelector('.panel-scroll')?.scrollTop || 0;
-    side.innerHTML = route.view === 'home' ? V.homePanel() : V.rayonPanel(route.rayon, thumbs, route.product?.slug);
+    side.innerHTML = route.view === 'home' ? V.homePanel(thumbs) : V.rayonPanel(route.rayon, thumbs, route.product?.slug);
     if (keepScroll) side.querySelector('.panel-scroll').scrollTop = scroll;
     sideKey = key;
   }
   side.classList.toggle('is-hidden', !entered || (isNarrow() && route.view === 'product'));
-  side.classList.toggle('collapsed', panelCollapsed);
+  side.classList.toggle('collapsed', panelCollapsed && !isNarrow());
+  if (isNarrow() && !side.className.includes('sheet-')) setSheet('half');
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === (route.view === 'home' ? 'village' : 'boutique')));
   const accent = route.rayon?.accent || '#e8c27a';
   side.style.setProperty('--accent', accent);
   $('#product-panel').style.setProperty('--accent', accent);
   updatePanelTab();
+  document.body.classList.toggle('has-product', route.view === 'product');
 
   const pp = $('#product-panel');
   if (route.view === 'product') {
@@ -270,15 +281,61 @@ function renderAll() {
 
 function updateCartBadge(bump = true) {
   const n = cart.count();
-  const b = $('#cart-count');
-  b.hidden = n === 0;
-  b.textContent = n;
-  if (bump) {
-    b.classList.remove('bump');
-    void b.offsetWidth;
-    b.classList.add('bump');
+  for (const b of [$('#cart-count'), $('#tab-cart-count')]) {
+    b.hidden = n === 0;
+    b.textContent = n;
+    if (bump) {
+      b.classList.remove('bump');
+      void b.offsetWidth;
+      b.classList.add('bump');
+    }
   }
 }
+
+// ---------------------------------------------------------------- Volet mobile (peek / half / full)
+let sheetState = 'half';
+function setSheet(state) {
+  sheetState = state;
+  const side = $('#side-panel');
+  side.classList.remove('sheet-peek', 'sheet-half', 'sheet-full');
+  side.classList.add(`sheet-${state}`);
+  side.style.removeProperty('--drag');
+}
+(function sheetDrag() {
+  const side = $('#side-panel');
+  let start = null;
+  side.addEventListener('pointerdown', (e) => {
+    if (!isNarrow() || !e.target.closest('.panel-head')) return;
+    start = { y: e.clientY, h: side.getBoundingClientRect().height, t: performance.now(), moved: false };
+    side.classList.add('dragging');
+  });
+  addEventListener('pointermove', (e) => {
+    if (!start) return;
+    const dy = e.clientY - start.y;
+    if (Math.abs(dy) > 6) start.moved = true;
+    side.style.setProperty('--drag', `${Math.max(90, start.h - dy)}px`);
+  });
+  addEventListener('pointerup', (e) => {
+    if (!start) return;
+    const dy = e.clientY - start.y;
+    const v = dy / Math.max(1, performance.now() - start.t);
+    side.classList.remove('dragging');
+    if (start.moved) {
+      side.dataset.dragged = '1';
+      setTimeout(() => delete side.dataset.dragged, 50);
+      const order = ['peek', 'half', 'full'];
+      let i = order.indexOf(sheetState);
+      if (dy < -40 || v < -0.5) i = Math.min(2, i + (dy < -240 ? 2 : 1));
+      else if (dy > 40 || v > 0.5) i = Math.max(0, i - (dy > 240 ? 2 : 1));
+      setSheet(order[i]);
+    }
+    start = null;
+  });
+  // un glissé ne doit pas aussi compter comme un tap
+  side.addEventListener('click', (e) => {
+    if (side.dataset.dragged && e.target.closest('.panel-head')) e.stopPropagation();
+  }, true);
+})();
 
 // ---------------------------------------------------------------- Menu repliable
 let panelCollapsed = false;
@@ -297,9 +354,15 @@ function updatePanelTab() {
 addEventListener('resize', () => updatePanelTab());
 
 let toastTimer;
-function toast(msg) {
+function toast(msg, { action } = {}) {
   const t = $('#toast');
   t.textContent = msg;
+  if (action) {
+    const b = document.createElement('button');
+    b.dataset.action = 'toast-action';
+    b.textContent = action;
+    t.appendChild(b);
+  }
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
@@ -330,6 +393,7 @@ $('#cart-backdrop').addEventListener('click', closeCart);
 const soundBtn = $('#sound-btn');
 music.onChange((on) => soundBtn.setAttribute('aria-pressed', String(on)));
 soundBtn.addEventListener('click', () => {
+  soundBtn.classList.remove('invite');
   music.toggle();
   toast(music.enabled ? '🎵 Musique de Noël activée' : 'Musique coupée');
 });
@@ -385,10 +449,20 @@ document.addEventListener('click', async (e) => {
   } else if (action === 'qty-dec' || action === 'qty-inc') {
     qty = Math.max(1, Math.min(99, qty + (action === 'qty-inc' ? 1 : -1)));
     $('#qty-value').textContent = qty;
+    const bt = $('#buy-total');
+    if (bt) bt.textContent = formatPrice(qty * route.product.price);
+  } else if (action === 'quick-add') {
+    const p = findProduct(btn.dataset.rayon, btn.dataset.slug);
+    cart.add(btn.dataset.rayon, btn.dataset.slug, 1);
+    music.ding();
+    btn.classList.remove('added');
+    void btn.offsetWidth;
+    btn.classList.add('added');
+    toast(`✓ ${p.name} ajouté au panier`, { action: 'Voir le panier' });
   } else if (action === 'add') {
     cart.add(route.rayon.slug, route.product.slug, qty);
     music.ding();
-    toast(`✓ ${qty} × ${route.product.name} ajouté${qty > 1 ? 's' : ''} au panier`);
+    toast(`✓ ${qty} × ${route.product.name} ajouté${qty > 1 ? 's' : ''} au panier`, { action: 'Voir le panier' });
   } else if (action === 'cart-inc' || action === 'cart-dec') {
     const l = cart.lines().find((x) => x.rayon === btn.dataset.rayon && x.slug === btn.dataset.slug);
     if (l) cart.setQty(l.rayon, l.slug, l.qty + (action === 'cart-inc' ? 1 : -1));
@@ -396,8 +470,17 @@ document.addEventListener('click', async (e) => {
     cart.remove(btn.dataset.rayon, btn.dataset.slug);
   } else if (action === 'close-cart') {
     closeCart();
+    if (btn.dataset.go && entered) navigate(btn.dataset.go);
   } else if (action === 'checkout') {
-    toast('Boutique de démonstration : le paiement en ligne n’est pas encore branché.');
+    toast('La commande en ligne ouvre très bientôt ✨');
+  } else if (action === 'open-cart' || action === 'toast-action') {
+    openCart();
+  } else if (action === 'open-shop') {
+    if (!entered) return;
+    if (route.view === 'product') navigate(V.rayonUrl(route.rayon));
+    setSheet('full');
+  } else if (action === 'toggle-sheet' && isNarrow()) {
+    setSheet(sheetState === 'full' ? 'half' : sheetState === 'half' ? 'full' : 'half');
   } else if (action === 'toggle-sheet') {
     panelCollapsed = !panelCollapsed;
     try {
@@ -436,7 +519,6 @@ document.addEventListener('pointerout', (e) => {
 addEventListener('keydown', (e) => {
   if (introCtl && e.key === 'Escape') return introCtl.skip();
   if (!entered) {
-    if (e.key === 'Enter' && !$('#loader-actions').hidden && document.activeElement === document.body) enter(true);
     return;
   }
   if (e.target.closest('input, textarea')) return;

@@ -321,8 +321,8 @@ export function createWorld(container, rayons) {
       const n = entry.chalet.inward;
       const p = entry.world.clone().add(new THREE.Vector3(0, 0.32, 0));
       return {
-        pos: p.clone().add(n.clone().multiplyScalar(isNarrow() ? 3.3 : fitDist(1.3, 2.9))).add(new THREE.Vector3(0, isNarrow() ? 0.6 : 0.4, 0)),
-        target: p.clone().add(new THREE.Vector3(0, isNarrow() ? -0.9 : 0, 0)),
+        pos: p.clone().add(n.clone().multiplyScalar(isNarrow() ? 4.6 : fitDist(1.3, 2.9))).add(new THREE.Vector3(0, isNarrow() ? 0.9 : 0.4, 0)),
+        target: p.clone().add(new THREE.Vector3(0, isNarrow() ? -1.25 : 0, 0)),
       };
     },
   };
