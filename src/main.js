@@ -6,6 +6,7 @@ import { renderThumbnails } from './scene/thumbnails.js';
 import { ChristmasMusic } from './audio/music.js';
 import * as V from './ui/views.js';
 import { playIntro, prelude } from './scene/intro.js';
+import { createHotspots, showCoach } from './ui/hotspots.js';
 
 const $ = (s) => document.querySelector(s);
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
@@ -66,28 +67,36 @@ async function boot() {
   }
   // L'histoire n'est jouée qu'à la première visite de l'accueil
   playStory = route.view === 'home' && !seen;
+  // Les images des produits sont fabriquées AVANT l'ouverture (village encore éclairé) :
+  // aucune carte vide quand la boutique apparaît.
+  progress(0.85, 'On emballe les décorations…');
+  await Promise.race([loadThumbnails(), new Promise((r) => setTimeout(r, 6000))]);
   if (playStory) prelude(world);
-  else loadThumbnails();
   renderAll();
   $('#side-panel').classList.add('is-hidden');
   await nextFrame();
   progress(1, 'Le village vous attend.');
   $('#loader').classList.add('ready');
   setupPointer();
+  createHotspots(world, {
+    onOpen: (r) => navigate(V.rayonUrl(r)),
+    isVisible: () => entered && route.view === 'home' && !world.flying && !document.body.classList.contains('cinematic'),
+  });
   // Entrée directe, en muet : la musique s'active avec le bouton 🔈
   setTimeout(() => enter(false), 350);
 }
 
 // Vignettes des produits : fabriquées en arrière-plan, après l'ouverture
 let thumbsStarted = false;
+let thumbsPromise = null;
 function loadThumbnails() {
-  if (thumbsStarted) return;
+  if (thumbsStarted) return thumbsPromise;
   thumbsStarted = true;
-  renderThumbnails(world, world.products).then((m) => {
+  return (thumbsPromise = renderThumbnails(world, world.products).then((m) => {
     thumbs = m;
     sideKey = '';
     renderAll();
-  });
+  }));
 }
 
 // ---------------------------------------------------------------- Séquence d'ouverture
@@ -133,6 +142,7 @@ function startStory() {
             document.body.classList.remove('cinematic');
             entered = true;
             renderAll();
+            setTimeout(showCoach, 600);
             loadThumbnails();
           }, 700);
           setTimeout(() => (cinema.hidden = true), 1300);
@@ -155,6 +165,7 @@ function enter(withMusic) {
   entered = true;
   world.stopIntro();
   applyRoute(parse(location.pathname), { first: true });
+  if (route.view === 'home') setTimeout(showCoach, 3600);
 }
 
 // ====================================================================== Routeur (une adresse par rayon)
@@ -551,7 +562,7 @@ function setupPointer() {
     const d = down;
     down = null;
     if (!d || world.flying) return;
-    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8 || performance.now() - d.t > 600) return;
+    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8 || performance.now() - d.t > 900) return;
     const t = pick(e.clientX, e.clientY);
     if (!t) return;
     closeMenu();
