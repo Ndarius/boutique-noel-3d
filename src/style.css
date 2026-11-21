@@ -738,3 +738,11 @@ body.cinematic .topbar, body.cinematic .dock, body.cinematic .panel { opacity: 0
   #toast.show { transform: none; }
   #toast button { flex: none; margin-left: 0; }
 }
+
+/* Badge « Powered by Netlify » (ajouté par Netlify) : sur mobile on l'éloigne des
+   onglets et du bouton d'achat. Il se désactive dans Netlify : Project configuration
+   › General › Powered by Netlify badge. */
+@media (max-width: 760px) {
+  #nl-badge-frame { top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)) !important; bottom: auto !important; transform: scale(0.82); transform-origin: top right; }
+  body.has-product #nl-badge-frame, body.cinematic #nl-badge-frame { opacity: 0.35; }
+}
