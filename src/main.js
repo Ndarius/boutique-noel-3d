@@ -58,7 +58,10 @@ async function boot() {
     document.body.classList.add('no3d');
     return;
   }
-  // laisse le navigateur afficher la boutique avant le calcul de la 3D
+  // laisse le navigateur afficher la boutique ET ses images avant le calcul de la 3D
+  await nextFrame();
+  const imgs = [...document.querySelectorAll('#side-panel .thumb img')].slice(0, 8);
+  await Promise.race([Promise.all(imgs.map((i) => i.decode().catch(() => {}))), new Promise((r) => setTimeout(r, 1500))]);
   await nextFrame();
   await new Promise((r) => setTimeout(r, 60));
   try {
