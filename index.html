@@ -20,6 +20,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <!-- image fixe du village, affichée instantanément le temps que la 3D se construise -->
+    <picture id="poster" aria-hidden="true">
+      <source media="(max-width: 760px)" srcset="/village-mobile.webp" />
+      <img src="/village-pc.webp" alt="" fetchpriority="high" />
+    </picture>
     <div id="scene" aria-hidden="true"></div>
 
     <!-- Seuil : l'histoire commence ici -->
@@ -45,6 +50,7 @@
         <p class="eyebrow">Le village est réveillé</p>
         <h2>Mon Sapin <em>de Noël</em></h2>
         <p>Cinq chalets vous attendent.</p>
+        <button class="btn btn-buy title-cta" data-action="story-end">Découvrir les 30 idées</button>
       </div>
       <button id="skip" class="skip">Passer l’intro <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 6 6-6 6M13 6l6 6-6 6"/></svg></button>
     </div>
@@ -84,7 +90,7 @@
       </button>
       <a href="/" data-link class="dock-home" id="dock-home">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>
-        <span>Le village</span>
+        <span id="dock-label">Le village</span>
       </a>
       <div class="dock-dots" id="dock-dots"></div>
       <button class="dock-btn" id="dock-next" aria-label="Rayon suivant">
@@ -93,9 +99,9 @@
     </div>
 
     <nav class="tabbar" id="tabbar" aria-label="Navigation principale">
-      <a href="/" data-link class="tab" data-tab="village">
+      <button class="tab" data-tab="village" data-action="open-village">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 7 10h3l-4 6h12l-4-6h3z"/><path d="M12 16v4"/></svg><span>Village</span>
-      </a>
+      </button>
       <button class="tab" data-tab="boutique" data-action="open-shop">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16l-1-5H5z"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg><span>Boutique</span>
       </button>
@@ -113,12 +119,12 @@
       <div>
         <p class="eyebrow">Petite pause</p>
         <h2 id="gl-lost-t">Votre appareil a mis la 3D en veille</h2>
-        <p>Cela arrive quand le téléphone manque de mémoire. Relancez le village, votre panier est conservé.</p>
+        <p>Cela arrive quand l’appareil manque de mémoire. Relancez le village pour continuer votre visite.</p>
         <button class="btn btn-gold" onclick="location.reload()">Relancer le village</button>
       </div>
     </div>
 
-    <noscript>Ce site en 3D nécessite JavaScript et WebGL.</noscript>
+    <noscript><!--LISTE-SANS-3D--></noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

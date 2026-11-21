@@ -133,7 +133,7 @@ function startStory() {
         world.releaseCamera(look);
         $('#skip').hidden = true;
         $('#title-card').classList.add('show');
-        setTimeout(() => {
+        storyEndTimer = setTimeout(() => {
           // le titre s'efface d'abord, puis l'interface apparaît
           $('#title-card').classList.remove('show');
           cinema.classList.remove('on');
@@ -148,6 +148,18 @@ function startStory() {
   });
 }
 $('#skip').addEventListener('click', () => introCtl?.skip());
+let storyEndTimer = 0;
+function finishStoryUi() {
+  clearTimeout(storyEndTimer);
+  $('#title-card').classList.remove('show');
+  $('#cinema').classList.remove('on');
+  document.body.classList.remove('cinematic');
+  setTimeout(() => ($('#cinema').hidden = true), 700);
+  panelMode = 'all';
+  sideKey = '';
+  renderAll();
+  if (isNarrow()) setSheet('full');
+}
 
 // « ▶ L'histoire du village » : la séquence du Père Noël, à la demande
 function playStoryNow() {
@@ -178,7 +190,7 @@ function parse(path) {
 const canonical = (r) => (r.view === 'product' ? V.productUrl(r.rayon, r.product) : r.view === 'rayon' ? V.rayonUrl(r.rayon) : '/');
 
 function navigate(path) {
-  topMode = false;
+  panelMode = 'home';
   if (path === location.pathname) {
     applyRoute(parse(path));
     return;
@@ -198,6 +210,7 @@ function applyRoute(next, { first = false } = {}) {
 
   updateTitle();
   renderAll();
+  hideTooltip();
   moveCamera(prev, next, first);
 }
 
@@ -208,30 +221,44 @@ function moveCamera(prev, next, first, forced) {
   if (next.view === 'home') {
     world.setSelected(null);
     const v = world.views.overview();
-    world.flyTo(v.pos, v.target, { mode: 'overview', duration: forced || (first ? 3.2 : 2.2) });
+    world.flyTo(v.pos, v.target, { mode: 'overview', duration: forced || (first ? 2.4 : 1.4) });
   } else if (next.view === 'rayon') {
     world.setSelected(null);
     const v = world.views.chalet(chalet);
-    world.flyTo(v.pos, v.target, { mode: 'chalet', duration: forced || (first ? 3.4 : sameRayon ? 1.2 : 2.3) });
+    world.flyTo(v.pos, v.target, { mode: 'chalet', duration: forced || (first ? 2.4 : sameRayon ? 0.9 : 1.4) });
   } else {
     const entry = world.products.find((p) => p.product === next.product && p.rayon === next.rayon);
     world.setSelected(entry);
     const v = world.views.product(entry);
-    world.flyTo(v.pos, v.target, { mode: 'product', duration: first ? 3.6 : sameRayon ? 1.3 : 2.6, azimuthRange: 0.5 });
+    world.flyTo(v.pos, v.target, { mode: 'product', duration: first ? 2.4 : sameRayon ? 0.9 : 1.5, azimuthRange: 0.5 });
   }
+}
+
+function hideTooltip() {
+  const tip = document.querySelector('#tooltip');
+  if (tip) tip.hidden = true;
+  document.body.classList.remove('hovering');
+  world?.setHovered(null);
 }
 
 function updateTitle() {
   const r = route;
+  let can = document.querySelector('link[rel="canonical"]');
+  if (!can) {
+    can = document.createElement('link');
+    can.rel = 'canonical';
+    document.head.appendChild(can);
+  }
+  can.href = location.origin + canonical(r);
   const meta = document.querySelector('meta[name="description"]');
   if (r.view === 'product') {
     document.title = `${r.product.name} — ${r.rayon.name} — ${BRAND.name}`;
     meta.content = r.product.description;
   } else if (r.view === 'rayon') {
-    document.title = `${r.rayon.name} · Rayon ${r.rayon.number} — ${BRAND.name}`;
+    document.title = `${r.rayon.name} · Chalet ${r.rayon.number} — ${BRAND.name}`;
     meta.content = r.rayon.description;
   } else {
-    document.title = `${BRAND.name} — ${BRAND.tagline}`;
+    document.title = 'Mon Sapin de Noël — Le village 3D de la décoration de Noël';
     meta.content = 'Cette nuit, le Père Noël a rallumé le village. Entrez dans cinq chalets en 3D et choisissez sapins, boules, lumières, crèches et cadeaux.';
   }
 }
@@ -242,19 +269,26 @@ function renderAll() {
   $('#rayon-nav').innerHTML = V.navLinks(current);
   $('#dock-dots').innerHTML = V.dockDots(current);
   $('#dock-home').toggleAttribute('aria-current', route.view === 'home');
+  $('#dock-label').textContent = route.rayon ? `Chalet ${route.rayon.number} · ${route.rayon.short}` : 'Le village';
+  $('#dock-home').setAttribute('aria-label', route.rayon ? 'Retour au village' : 'Le village');
   if (route.view === 'home') $('#dock-home').setAttribute('aria-current', 'page');
 
   const side = $('#side-panel');
-  const key = route.view === 'home' ? 'home' : `rayon:${current}:${route.product?.slug || ''}`;
+  const key = route.view === 'home' ? `home:${panelMode}` : `rayon:${current}:${route.product?.slug || ''}`;
   if (key !== sideKey) {
     const keepScroll = sideKey.startsWith(`rayon:${current}:`) && route.view !== 'home';
     const scroll = side.querySelector('.panel-scroll')?.scrollTop || 0;
-    side.innerHTML = route.view === 'home' ? V.homePanel(thumbs) : V.rayonPanel(route.rayon, thumbs, route.product?.slug);
+    side.innerHTML =
+      route.view !== 'home' ? V.rayonPanel(route.rayon, thumbs, route.product?.slug)
+      : panelMode === 'all' ? V.allPanel(thumbs)
+      : panelMode === 'top' ? V.topPanel(thumbs)
+      : V.homePanel(thumbs);
     if (keepScroll) side.querySelector('.panel-scroll').scrollTop = scroll;
     sideKey = key;
   }
   side.classList.toggle('is-hidden', !entered || ((isNarrow() || isShort()) && route.view === 'product'));
-  side.classList.toggle('collapsed', panelCollapsed && !isNarrow());
+  const autoFold = !isNarrow() && !isShort() && route.view === 'product';
+  side.classList.toggle('collapsed', (panelCollapsed || autoFold) && !isNarrow());
   if (isNarrow() && !side.className.includes('sheet-')) setSheet('half');
   renderTabs();
   const accent = route.rayon?.accent || '#e8c27a';
@@ -279,9 +313,11 @@ function renderAll() {
 
 // ---------------------------------------------------------------- Volet mobile (peek / half / full)
 let sheetState = 'half';
-let topMode = false;
+// Onglets mobiles : chacun a sa fonction et reste allumé tant que son écran est affiché
+let panelMode = 'home'; // 'home' (village) | 'all' (toute la boutique) | 'top' (top idées)
 function renderTabs() {
-  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === (route.view === 'home' ? (topMode ? 'top' : 'village') : 'boutique')));
+  const active = route.view !== 'home' ? 'boutique' : panelMode === 'all' ? 'boutique' : panelMode === 'top' ? 'top' : 'village';
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === active));
 }
 function setSheet(state) {
   sheetState = state;
@@ -418,28 +454,20 @@ document.addEventListener('click', async (e) => {
     } catch {
       toast(url);
     }
-  } else if (action === 'open-top') {
-    if (!entered) return;
-    const go = () => {
-      topMode = true;
-      setSheet('full');
-      setTimeout(() => {
-        const t = $('#side-panel .top-ideas');
-        const sc = $('#side-panel .panel-scroll');
-        if (t && sc) sc.scrollTo({ top: t.offsetTop - 64, behavior: 'smooth' });
-        renderTabs();
-      }, 80);
-    };
-    if (route.view !== 'home') {
-      navigate('/');
-      setTimeout(go, 60);
-    } else go();
+  } else if (action === 'open-top' || action === 'open-shop' || action === 'open-village') {
+    const mode = action === 'open-top' ? 'top' : action === 'open-shop' ? 'all' : 'home';
+    if (route.view !== 'home') navigate('/');
+    panelMode = mode;
+    sideKey = '';
+    renderAll();
+    $('#side-panel .panel-scroll')?.scrollTo({ top: 0 });
+    if (isNarrow()) setSheet(mode === 'home' ? 'peek' : 'full');
+    else if (panelCollapsed) $('#side-panel [data-action="toggle-sheet"]')?.click();
+  } else if (action === 'story-end') {
+    introCtl?.skip();
+    finishStoryUi();
   } else if (action === 'story') {
     playStoryNow();
-  } else if (action === 'open-shop') {
-    if (!entered) return;
-    if (route.view === 'product') navigate(V.rayonUrl(route.rayon));
-    setSheet('full');
   } else if (action === 'toggle-sheet' && isNarrow()) {
     // toucher la barre : ferme (aperçu) ou rouvre ; depuis le plein écran, revient à mi-hauteur
     setSheet(sheetState === 'peek' ? 'half' : sheetState === 'full' ? 'half' : 'peek');

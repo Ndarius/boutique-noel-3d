@@ -87,7 +87,7 @@ export function homePanel(thumbs) {
     ${chips(null)}
     <p class="eyebrow">Le village est réveillé</p>
     <h1>Cinq chalets.<br>Un Noël à composer.</h1>
-    <h3 class="section-title top-ideas">${ico.star} Les incontournables <button class="see-all" data-action="sheet-full">Tout voir ${ico.arrowR}</button></h3>
+    <h3 class="section-title top-ideas">${ico.star} Les incontournables <button class="see-all" data-action="open-shop">Tout voir ${ico.arrowR}</button></h3>
     <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs)).join('')}</div>
     <button class="story-btn" data-action="story"><span class="sb-play">▶</span><span><strong>L’histoire du village</strong><small>Le Père Noël passe en avance · 15 s</small></span></button>
     <h3 class="section-title">${ico.tree} Entrez dans un chalet</h3>
@@ -100,6 +100,34 @@ export function homePanel(thumbs) {
           <span class="arrow">${ico.arrowR}</span></a></li>`,
       ).join('')}
     </ul>
+    ${disclosure()}
+  </div>`;
+}
+
+// ---------------------------------------------------------------- Toute la boutique (onglet Boutique)
+export function allPanel(thumbs) {
+  const total = RAYONS.reduce((n, r) => n + r.products.length, 0);
+  return `${sheetHead('Toute la boutique', `${total} idées · 5 chalets`)}
+  <div class="panel-scroll">
+    ${chips(null)}
+    ${RAYONS.map(
+      (r) => `<section class="shop-section" style="--accent:${r.accent}">
+        <h3 class="section-title shop-title"><span class="st-n">${r.number}</span>${r.name}
+          <a class="see-all" href="${rayonUrl(r)}" data-link>Entrer ${ico.arrowR}</a></h3>
+        <div class="prod-grid">${r.products.map((p) => productCard(r, p, thumbs)).join('')}</div>
+      </section>`,
+    ).join('')}
+    ${disclosure()}
+  </div>`;
+}
+
+// ---------------------------------------------------------------- Top idées (onglet Top idées)
+export function topPanel(thumbs) {
+  const favs = RAYONS.flatMap((r) => r.products.filter((p) => p.badge).map((p) => [r, p])).slice(0, 8);
+  return `${sheetHead('Top idées', 'Notre sélection pour ce Noël')}
+  <div class="panel-scroll">
+    ${chips(null)}
+    <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs)).join('')}</div>
     ${disclosure()}
   </div>`;
 }

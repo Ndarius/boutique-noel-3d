@@ -353,6 +353,6 @@ export const AMAZON = {
 
 export function amazonUrl(product) {
   if (product.lien) return product.lien;
-  const q = encodeURIComponent(`${product.name} décoration Noël`);
+  const q = encodeURIComponent(product.name);
   return `https://${AMAZON.domain}/s?k=${q}${AMAZON.tag ? `&tag=${encodeURIComponent(AMAZON.tag)}` : ''}`;
 }

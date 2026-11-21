@@ -1042,3 +1042,58 @@ body.no3d .story-btn, body:not(.scene-ready) .story-btn { display: none; }
   .side-panel .panel-scroll > .lead { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13.5px; margin-bottom: 12px; }
   .side-panel .section-title.chalet-title { margin-top: 4px; }
 }
+
+/* =================================================================== Audit 1 — finitions */
+/* Histoire : sous-titres lisibles, « Passer » visible, bouton final */
+.caption { padding: 14px 18px; border-radius: 16px; background: linear-gradient(180deg, rgba(4, 8, 18, 0), rgba(4, 8, 18, 0.72) 30%, rgba(4, 8, 18, 0.72)); font-style: normal; }
+.skip { padding: 12px 20px; font-size: 15px; font-weight: 700; background: rgba(10, 17, 32, 0.85); border-color: rgba(241, 220, 171, 0.5); color: #fff6e3; }
+.title-card { pointer-events: none; }
+.title-card.show .title-cta { pointer-events: auto; }
+.title-cta { margin: 22px auto 0; min-height: 52px; padding: 0 26px; width: auto; }
+/* Points de navigation : grande zone cliquable, petite pastille visible */
+.dock-dots { gap: 0; }
+.dock-dots a { position: relative; width: 26px; height: 44px; background: none; display: grid; place-items: center; transform: none !important; box-shadow: none !important; }
+.dock-dots a::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); transition: transform 0.2s, background 0.2s; }
+.dock-dots a:hover::before { transform: scale(1.3); }
+.dock-dots a[aria-current='page']::before { background: var(--accent); transform: scale(1.35); box-shadow: 0 0 10px var(--accent); }
+/* PC : « Dans le même chalet » en grille 2 × 2 */
+@media (min-width: 761px) {
+  .also { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-columns: auto; overflow: visible; }
+}
+/* Une seule mention « Liens partenaires » quand la fiche est ouverte */
+body.has-product .side-panel .disclosure { display: none; }
+/* Toute la boutique : en-têtes de chalet */
+.shop-section + .shop-section { margin-top: 8px; }
+.shop-title { display: flex; align-items: center; gap: 10px; }
+.shop-title .st-n { flex: none; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 15px; }
+.shop-title .see-all { display: inline-flex; }
+@media (min-width: 761px) { .see-all { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; padding: 4px 0 4px 10px; background: none; border: 0; font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--champagne); } .see-all svg { width: 15px; height: 15px; } .section-title.chalet-title .see-all { display: none; } }
+
+@media (max-width: 760px) {
+  /* volet à l'arrivée : environ 40 %, cartes compactes en carrousel */
+  .side-panel.sheet-half { height: var(--drag, 41dvh); }
+  .sheet-half .prod-grid { grid-auto-columns: 40%; gap: 8px; }
+  .sheet-half .prod-card { padding: 6px; border-radius: 15px; }
+  .sheet-half .prod-card .thumb { aspect-ratio: 16 / 10; }
+  .sheet-half .prod-card .name { font-size: 12px; min-height: 0; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet-half .card-buy { min-height: 36px; margin-top: 6px; font-size: 13.5px; }
+  .sheet-half .tag { top: 10px; left: 10px; }
+  .sheet-half .chips { margin-bottom: 6px; padding-bottom: 6px; }
+  .sheet-half .section-title { margin: 0 0 6px; }
+  .coach { bottom: calc(41dvh + var(--tabbar-h) + 12px); }
+}
+@media (max-width: 760px) and (max-height: 680px) {
+  .side-panel.sheet-half { height: var(--drag, 50dvh); }
+}
+
+/* Image d'attente du village : se fond dans la 3D dès qu'elle est prête */
+#poster { position: fixed; inset: 0; z-index: 0; transition: opacity 1.2s ease; pointer-events: none; }
+#poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#scene { z-index: 0; }
+body.scene-ready #poster { opacity: 0; }
+body.no3d #poster { opacity: 1; }
+/* Liste sans 3D (navigateurs sans JavaScript) */
+.noscript-list { position: relative; z-index: 60; max-width: 760px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-left, 0px)); background: #0b1426; color: #f6f1e7; font-family: Inter, system-ui, sans-serif; min-height: 100vh; overflow: auto; }
+.noscript-list h2 { font-family: Georgia, serif; }
+.noscript-list a { color: #f1dcab; }
+.dock-dots a, .dock-dots a[aria-current='page'] { background: none !important; border-radius: 0; }

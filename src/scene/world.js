@@ -272,7 +272,7 @@ export function createWorld(container, rayons) {
   function applyLimits(mode, range) {
     if (mode === 'overview') {
       controls.minDistance = 12;
-      controls.maxDistance = 60;
+      controls.maxDistance = isNarrow() ? 110 : 60;
       controls.minPolarAngle = 0.35;
       controls.maxPolarAngle = 1.4;
       controls.minAzimuthAngle = -Infinity;
@@ -303,7 +303,11 @@ export function createWorld(container, rayons) {
     },
     overview() {
       return isNarrow()
-        ? { pos: new THREE.Vector3(0, 34, 46), target: new THREE.Vector3(0, -11, -10) } // village cadré dans le haut de l'écran, au-dessus du volet
+        ? (() => {
+            // recul calculé pour que les 5 chalets tiennent dans la largeur du téléphone
+            const d = fitDist(19, 48);
+            return { pos: new THREE.Vector3(0, 2 + d * 0.62, -4 + d * 0.78), target: new THREE.Vector3(0, -d * 0.2, -4) };
+          })() // village cadré dans le haut de l'écran, au-dessus du volet
         : (() => {
             const k = Math.max(1, fitDist(24, 38) / 38);
             const x = views.panelOpen ? -4.5 * Math.min(1.5, Math.max(1, (Math.min(520, Math.max(360, innerWidth * 0.27)) / innerWidth) / 0.27)) : 0;

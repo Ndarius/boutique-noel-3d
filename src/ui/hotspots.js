@@ -70,7 +70,10 @@ export function showCoach() {
     requestAnimationFrame(place);
   };
   requestAnimationFrame(place);
-  el.innerHTML = `<span class="coach-hand" aria-hidden="true">👆</span><span>Glissez pour tourner autour du village<br><strong>Touchez un chalet pour y entrer</strong></span>`;
+  const mouse = matchMedia('(pointer: fine)').matches;
+  el.innerHTML = mouse
+    ? `<span class="coach-hand" aria-hidden="true">🖱️</span><span>Faites glisser avec la souris pour tourner autour du village<br><strong>Cliquez sur un chalet pour y entrer</strong></span>`
+    : `<span class="coach-hand" aria-hidden="true">👆</span><span>Glissez pour tourner autour du village<br><strong>Touchez un chalet pour y entrer</strong></span>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('on'));
   const hide = () => {
