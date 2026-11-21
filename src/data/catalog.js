@@ -337,3 +337,22 @@ export const allProducts = () =>
 export const formatPrice = (n) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
 
+
+// ---------------------------------------------------------------- Affiliation Amazon
+// - `tag` : votre identifiant Partenaires Amazon (ex. 'monsapin-21'). Il est ajouté
+//   automatiquement aux liens de recherche tant qu'un produit n'a pas son propre lien.
+// - Pour un produit, ajoutez `lien: 'https://amzn.to/…'` : ce lien est alors utilisé.
+// - `showPrices` : le règlement Amazon Partenaires interdit d'afficher des prix fixes
+//   non mis à jour ; laissez `false` sauf si vos prix viennent de l'API Amazon.
+export const AMAZON = {
+  domain: 'www.amazon.fr',
+  tag: '',
+  showPrices: false,
+  disclosure: 'En tant que Partenaire Amazon, nous réalisons un bénéfice sur les achats remplissant les conditions requises.',
+};
+
+export function amazonUrl(product) {
+  if (product.lien) return product.lien;
+  const q = encodeURIComponent(`${product.name} décoration Noël`);
+  return `https://${AMAZON.domain}/s?k=${q}${AMAZON.tag ? `&tag=${encodeURIComponent(AMAZON.tag)}` : ''}`;
+}

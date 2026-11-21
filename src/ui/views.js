@@ -1,28 +1,26 @@
-import { RAYONS, formatPrice } from '../data/catalog.js';
+import { RAYONS, AMAZON, amazonUrl, formatPrice } from '../data/catalog.js';
 
 export const rayonUrl = (r) => `/rayon/${r.slug}`;
 export const productUrl = (r, p) => `/rayon/${r.slug}/${p.slug}`;
-
 
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
 export const ico = {
   arrowR: svg('<path d="m9 6 6 6-6 6"/>'),
   arrowL: svg('<path d="m15 6-6 6 6 6"/>'),
-  copy: svg('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>'),
   share: svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>'),
   check: svg('<path d="m5 12 5 5 9-11"/>'),
   close: svg('<path d="M6 6l12 12M18 6 6 18"/>'),
   collapse: svg('<path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/>'),
   chevron: svg('<path d="m6 15 6-6 6 6"/>'),
-  plus: svg('<path d="M12 5v14M5 12h14"/>'),
-  bag: svg('<path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/>'),
+  heart: svg('<path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.6 5c2 0 3.4 1.1 4.4 2.6h2C14 6.1 15.4 5 17.4 5c3.2 0 5 3.4 3.6 6.4C19 15.6 12 20 12 20z"/>'),
+  external: svg('<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
   gift: svg('<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8S10 3 7.5 4.5 9 8 12 8zm0 0s2-5 4.5-3.5S15 8 12 8z"/>'),
-  truck: svg('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>'),
   tree: svg('<path d="M12 3 7 10h3l-4 6h12l-4-6h3z"/><path d="M12 16v4"/>'),
-  back: svg('<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'),
-  shield: svg('<path d="M12 3 5 6v6c0 4 3 7.5 7 9 4-1.5 7-5 7-9V6z"/><path d="m9 12 2 2 4-4"/>'),
   star: svg('<path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>'),
 };
+
+const priceTag = (p, cls = 'price') => (AMAZON.showPrices ? `<span class="${cls}">${formatPrice(p.price)}</span>` : '');
+const amazonAttrs = (p) => `href="${amazonUrl(p)}" target="_blank" rel="sponsored noopener noreferrer"`;
 
 const img = (thumbs, p) => {
   const src = thumbs.get(p.slug);
@@ -31,6 +29,7 @@ const img = (thumbs, p) => {
 const thumbBox = (thumbs, p, cls = 'thumb') =>
   `<span class="${cls}${thumbs.has(p.slug) ? '' : ' loading'}">${img(thumbs, p)}</span>`;
 
+const disclosure = () => `<p class="disclosure">Liens partenaires · ${AMAZON.disclosure}</p>`;
 
 // ---------------------------------------------------------------- Navigation
 export function navLinks(current) {
@@ -63,48 +62,53 @@ function sheetHead(title, sub) {
 }
 
 // ---------------------------------------------------------------- Cartes produit
-export function productCard(rayon, p, thumbs, active) {
+// Toucher la carte ouvre la fiche (produit en 3D) ; « Amazon » ouvre le produit sur Amazon ;
+// le cœur garde l'idée dans « Ma liste de Noël ».
+export function productCard(rayon, p, thumbs, wish, active) {
+  const saved = wish.has(rayon.slug, p.slug);
   return `<article class="prod-card" data-product="${p.slug}" style="--accent:${rayon.accent}" ${active ? 'aria-current="true"' : ''}>
     <a class="prod-link" href="${productUrl(rayon, p)}" data-link>
       ${p.badge ? `<span class="tag">${p.badge}</span>` : ''}
       ${thumbBox(thumbs, p)}
       <span class="name">${p.name}</span>
-      <span class="price">${formatPrice(p.price)}</span>
+      ${priceTag(p)}
     </a>
-    <button class="quick-add" data-action="quick-add" data-rayon="${rayon.slug}" data-slug="${p.slug}" aria-label="Ajouter « ${p.name} » au panier">${ico.plus}</button>
+    <a class="card-amazon" ${amazonAttrs(p)} aria-label="Voir « ${p.name} » sur Amazon">Voir sur Amazon ${ico.external}</a>
+    <button class="wish ${saved ? 'on' : ''}" data-action="wish" data-rayon="${rayon.slug}" data-slug="${p.slug}" aria-pressed="${saved}" aria-label="${saved ? 'Retirer de' : 'Ajouter à'} ma liste de Noël">${ico.heart}</button>
   </article>`;
 }
 
 // ---------------------------------------------------------------- Accueil
-export function homePanel(thumbs) {
+export function homePanel(thumbs, wish) {
   const total = RAYONS.reduce((n, r) => n + r.products.length, 0);
   const favs = RAYONS.flatMap((r) => r.products.filter((p) => p.badge === 'Best-seller').map((p) => [r, p])).slice(0, 4);
-  return `${sheetHead('Le village', `5 chalets · ${total} trésors de Noël`)}
+  return `${sheetHead('Le village', `5 chalets · ${total} idées déco de Noël`)}
   <div class="panel-scroll">
     ${chips(null)}
     <p class="eyebrow">Le village est réveillé</p>
     <h1>Cinq chalets.<br>Un Noël à composer.</h1>
-    <p class="lead">Chaque chalet garde une partie de la magie. Entrez, approchez-vous des étagères et emportez ce qui fera briller votre maison.</p>
+    <p class="lead">Chaque chalet garde une partie de la magie. Entrez, approchez-vous des étagères et gardez vos coups de cœur dans votre liste de Noël.</p>
     <ul class="rayon-list">
       ${RAYONS.map(
         (r) => `<li><a class="rayon-card" href="${rayonUrl(r)}" data-link data-rayon="${r.slug}" style="--accent:${r.accent}">
           <span class="num">${r.number}</span>
-          <span class="rc-text"><strong>${r.name}</strong><small>${r.products.length} trésors · dès ${formatPrice(Math.min(...r.products.map((p) => p.price)))}</small></span>
+          <span class="rc-text"><strong>${r.name}</strong><small>${r.products.length} idées${AMAZON.showPrices ? ` · dès ${formatPrice(Math.min(...r.products.map((p) => p.price)))}` : ''}</small></span>
           <span class="minis">${r.products.slice(0, 3).map((p) => thumbBox(thumbs, p, 'mini')).join('')}</span>
           <span class="arrow">${ico.arrowR}</span></a></li>`,
       ).join('')}
     </ul>
     <h3 class="section-title">${ico.star} Les coups de cœur du village</h3>
-    <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs)).join('')}</div>
+    <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs, wish)).join('')}</div>
+    ${disclosure()}
   </div>`;
 }
 
 // ---------------------------------------------------------------- Chalet
-export function rayonPanel(rayon, thumbs, activeSlug) {
+export function rayonPanel(rayon, thumbs, wish, activeSlug) {
   const i = RAYONS.indexOf(rayon);
   const prev = RAYONS[(i + RAYONS.length - 1) % RAYONS.length];
   const next = RAYONS[(i + 1) % RAYONS.length];
-  return `${sheetHead(rayon.name, `Chalet ${rayon.number} · ${rayon.products.length} trésors · dès ${formatPrice(Math.min(...rayon.products.map((p) => p.price)))}`)}
+  return `${sheetHead(rayon.name, `Chalet ${rayon.number} sur ${RAYONS.length} · ${rayon.products.length} idées`)}
   <div class="panel-scroll" style="--accent:${rayon.accent}">
     ${chips(rayon.slug)}
     <a href="/" data-link class="back-link">${ico.arrowL} Retour au village</a>
@@ -112,22 +116,24 @@ export function rayonPanel(rayon, thumbs, activeSlug) {
     <h2>${rayon.name}</h2>
     <p class="lead">${rayon.description}</p>
     <div class="prod-grid">
-      ${rayon.products.map((p) => productCard(rayon, p, thumbs, p.slug === activeSlug)).join('')}
+      ${rayon.products.map((p) => productCard(rayon, p, thumbs, wish, p.slug === activeSlug)).join('')}
     </div>
     <button class="share-chalet" data-action="copy" data-path="${rayonUrl(rayon)}">${ico.share} Partager ce chalet</button>
     <div class="pager">
       <a href="${rayonUrl(prev)}" data-link>← Chalet ${prev.number}<strong>${prev.short}</strong></a>
       <a href="${rayonUrl(next)}" data-link class="next">Chalet ${next.number} →<strong>${next.short}</strong></a>
     </div>
+    ${disclosure()}
   </div>`;
 }
 
 // ---------------------------------------------------------------- Fiche produit
-export function productPanel(rayon, product, thumbs, qty) {
+export function productPanel(rayon, product, thumbs, wish) {
   const i = rayon.products.indexOf(product);
   const prev = rayon.products[(i + rayon.products.length - 1) % rayon.products.length];
   const next = rayon.products[(i + 1) % rayon.products.length];
   const others = rayon.products.filter((p) => p !== product).slice(0, 4);
+  const saved = wish.has(rayon.slug, product.slug);
   return `<div class="pp-scroll">
     <a class="icon-btn close" href="${rayonUrl(rayon)}" data-link aria-label="Fermer la fiche">${ico.close}</a>
     <span class="pp-grip" aria-hidden="true"></span>
@@ -137,64 +143,48 @@ export function productPanel(rayon, product, thumbs, qty) {
       <div>
         ${product.badge ? `<span class="tag inline">${product.badge}</span>` : ''}
         <h2>${product.name}</h2>
-        <p class="price-big">${formatPrice(product.price)} <small>TTC</small></p>
+        ${priceTag(product, 'price-big')}
       </div>
     </div>
     <p class="desc">${product.description}</p>
     <ul class="details">${product.details.map((d) => `<li>${ico.check}<span>${d}</span></li>`).join('')}</ul>
     <h3 class="section-title">Dans le même chalet</h3>
-    <div class="also">${others.map((p) => `<a href="${productUrl(rayon, p)}" data-link class="also-card">${thumbBox(thumbs, p)}<span class="name">${p.name}</span><span class="price">${formatPrice(p.price)}</span></a>`).join('')}</div>
+    <div class="also">${others.map((p) => `<a href="${productUrl(rayon, p)}" data-link class="also-card">${thumbBox(thumbs, p)}<span class="name">${p.name}</span>${priceTag(p)}</a>`).join('')}</div>
     <nav class="prod-nav" aria-label="Produits du chalet">
       <a href="${productUrl(rayon, prev)}" data-link>${ico.arrowL} Précédent</a>
       <button class="share" data-action="copy" data-path="${productUrl(rayon, product)}">${ico.share} Partager</button>
       <a href="${productUrl(rayon, next)}" data-link>Suivant ${ico.arrowR}</a>
     </nav>
+    ${disclosure()}
   </div>
   <div class="buy-bar">
-    <div class="qty" role="group" aria-label="Quantité">
-      <button data-action="qty-dec" aria-label="Diminuer">−</button>
-      <output id="qty-value">${qty}</output>
-      <button data-action="qty-inc" aria-label="Augmenter">+</button>
-    </div>
-    ${product.lien
-      ? `<a class="btn btn-gold" href="${product.lien}" target="_blank" rel="noopener">${ico.bag}<span>Acheter · <b id="buy-total">${formatPrice(qty * product.price)}</b></span></a>`
-      : `<button class="btn btn-gold" data-action="add">${ico.bag}<span>Ajouter · <b id="buy-total">${formatPrice(qty * product.price)}</b></span></button>`}
+    <button class="wish-big ${saved ? 'on' : ''}" data-action="wish" data-rayon="${rayon.slug}" data-slug="${product.slug}" aria-pressed="${saved}" aria-label="${saved ? 'Retirer de' : 'Ajouter à'} ma liste de Noël">${ico.heart}</button>
+    <a class="btn btn-gold btn-amazon" ${amazonAttrs(product)}>Voir sur Amazon ${ico.external}</a>
   </div>`;
 }
 
-// ---------------------------------------------------------------- Panier & commande
-function cartHead(title) {
-  return `<div class="cart-head">
-    <h2>${title}</h2>
-    <button class="icon-btn" data-action="close-cart" aria-label="Fermer le panier">${ico.close}</button></div>`;
-}
-
-export function cartDrawer(cart, thumbs) {
-  const lines = cart.lines();
-  const total = cart.total();
-  const count = cart.count();
-  const items = lines.length
+// ---------------------------------------------------------------- Ma liste de Noël
+export function wishDrawer(wish, thumbs) {
+  const lines = wish.lines();
+  const body = lines.length
     ? `<ul class="cart-items">${lines
         .map(
-          (l) => `<li class="cart-item">
-          <span class="thumb">${img(thumbs, l.product)}</span>
-          <div class="ci-main"><div class="n">${l.product.name}</div><div class="r">${formatPrice(l.product.price)} l’unité</div>
-            <div class="qty" role="group" aria-label="Quantité">
-              <button data-action="cart-dec" data-rayon="${l.rayon}" data-slug="${l.slug}" aria-label="Diminuer">−</button>
-              <output>${l.qty}</output>
-              <button data-action="cart-inc" data-rayon="${l.rayon}" data-slug="${l.slug}" aria-label="Augmenter">+</button>
-            </div></div>
-          <div class="ci-side"><div class="p">${formatPrice(l.qty * l.product.price)}</div>
-            <button class="rm" data-action="cart-rm" data-rayon="${l.rayon}" data-slug="${l.slug}">Retirer</button></div>
+          (l) => `<li class="cart-item wish-item" style="--accent:${l.rayonObj.accent}">
+          <a class="thumb" href="${productUrl(l.rayonObj, l.product)}" data-link aria-label="Voir la fiche de ${l.product.name}">${img(thumbs, l.product)}</a>
+          <div class="ci-main"><a class="n" href="${productUrl(l.rayonObj, l.product)}" data-link>${l.product.name}</a>
+            <div class="r"><span class="dot"></span>${l.rayonObj.name}</div>
+            <a class="wl-amazon" ${amazonAttrs(l.product)}>Voir sur Amazon ${ico.external}</a></div>
+          <button class="rm-x" data-action="wish-rm" data-rayon="${l.rayon}" data-slug="${l.slug}" aria-label="Retirer ${l.product.name} de ma liste">${ico.close}</button>
         </li>`,
         )
         .join('')}</ul>`
-    : `<div class="cart-items"><div class="cart-empty">${ico.gift}<p><strong>Votre panier attend ses premiers trésors.</strong><br>Les coups de cœur du village sont à un geste.</p>
+    : `<div class="cart-items"><div class="cart-empty">${ico.heart}<p><strong>Votre liste de Noël est vide.</strong><br>Touchez le cœur d’une décoration pour la garder ici, puis retrouvez-la sur Amazon quand vous voulez.</p>
         <button class="btn btn-ghost" data-action="close-cart" data-go="/">Découvrir le village</button></div></div>`;
-  return `${cartHead(`Votre panier${count ? ` <small>(${count})</small>` : ''}`)}
-    ${items}
+  return `<div class="cart-head"><h2>Ma liste de Noël${lines.length ? ` <small>(${lines.length})</small>` : ''}</h2>
+      <button class="icon-btn" data-action="close-cart" aria-label="Fermer ma liste">${ico.close}</button></div>
+    ${body}
     <div class="cart-foot">
-      <div class="total"><span>Total</span><strong>${formatPrice(total)}</strong></div>
-      <button class="btn btn-gold btn-block" data-action="checkout" ${lines.length ? '' : 'disabled'}>Commander ${ico.arrowR}</button>
+      ${lines.length ? `<button class="btn btn-ghost btn-block" data-action="share-list">${ico.share} Partager ma liste</button>` : ''}
+      ${disclosure()}
     </div>`;
 }

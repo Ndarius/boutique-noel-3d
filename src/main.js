@@ -1,10 +1,10 @@
 import './style.css';
 import * as THREE from 'three';
-import { RAYONS, BRAND, findRayon, findProduct, formatPrice } from './data/catalog.js';
-import { createWorld, isMobile, isNarrow } from './scene/world.js';
+import { RAYONS, BRAND, findRayon, findProduct } from './data/catalog.js';
+import { createWorld, isMobile, isNarrow, isShort } from './scene/world.js';
 import { renderThumbnails } from './scene/thumbnails.js';
 import { ChristmasMusic } from './audio/music.js';
-import { createCart } from './ui/cart.js';
+import { createWishlist } from './ui/wishlist.js';
 import * as V from './ui/views.js';
 import { playIntro, prelude } from './scene/intro.js';
 
@@ -12,12 +12,11 @@ const $ = (s) => document.querySelector(s);
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
 
 const music = new ChristmasMusic();
-const cart = createCart();
+const wish = createWishlist();
 let world;
 let thumbs = new Map();
 let entered = false;
 let route = { view: 'home' };
-let qty = 1;
 let sideKey = '';
 
 // ====================================================================== Écran d'accueil
@@ -90,7 +89,7 @@ function loadThumbnails() {
     thumbs = m;
     sideKey = '';
     renderAll();
-    if (cartOpen()) $('#cart-drawer').innerHTML = V.cartDrawer(cart, thumbs);
+    if (cartOpen()) $('#cart-drawer').innerHTML = V.wishDrawer(wish, thumbs);
   });
 }
 
@@ -174,7 +173,7 @@ function parse(path) {
     }
     return { view: 'rayon', rayon };
   }
-  if (parts[0] === 'panier') return { view: 'home', cart: true };
+  if (parts[0] === 'liste' || parts[0] === 'panier') return { view: 'home', cart: true };
   return { view: 'home' };
 }
 
@@ -199,7 +198,6 @@ function applyRoute(next, { first = false } = {}) {
   } else if (next.cart) history.replaceState({}, '', '/');
   if (next.cart) openCart();
 
-  if (next.product?.slug !== prev.product?.slug) qty = 1;
   updateTitle();
   renderAll();
   moveCamera(prev, next, first);
@@ -253,14 +251,14 @@ function renderAll() {
   if (key !== sideKey) {
     const keepScroll = sideKey.startsWith(`rayon:${current}:`) && route.view !== 'home';
     const scroll = side.querySelector('.panel-scroll')?.scrollTop || 0;
-    side.innerHTML = route.view === 'home' ? V.homePanel(thumbs) : V.rayonPanel(route.rayon, thumbs, route.product?.slug);
+    side.innerHTML = route.view === 'home' ? V.homePanel(thumbs, wish) : V.rayonPanel(route.rayon, thumbs, wish, route.product?.slug);
     if (keepScroll) side.querySelector('.panel-scroll').scrollTop = scroll;
     sideKey = key;
   }
-  side.classList.toggle('is-hidden', !entered || (isNarrow() && route.view === 'product'));
+  side.classList.toggle('is-hidden', !entered || ((isNarrow() || isShort()) && route.view === 'product'));
   side.classList.toggle('collapsed', panelCollapsed && !isNarrow());
   if (isNarrow() && !side.className.includes('sheet-')) setSheet('half');
-  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === (route.view === 'home' ? 'village' : 'boutique')));
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === (cartOpen() ? 'liste' : route.view === 'home' ? 'village' : 'boutique')));
   const accent = route.rayon?.accent || '#e8c27a';
   side.style.setProperty('--accent', accent);
   $('#product-panel').style.setProperty('--accent', accent);
@@ -269,7 +267,7 @@ function renderAll() {
 
   const pp = $('#product-panel');
   if (route.view === 'product') {
-    pp.innerHTML = V.productPanel(route.rayon, route.product, thumbs, qty);
+    pp.innerHTML = V.productPanel(route.rayon, route.product, thumbs, wish);
     pp.hidden = false;
     pp.style.animation = 'none';
     void pp.offsetWidth;
@@ -280,7 +278,7 @@ function renderAll() {
 }
 
 function updateCartBadge(bump = true) {
-  const n = cart.count();
+  const n = wish.count();
   for (const b of [$('#cart-count'), $('#tab-cart-count')]) {
     b.hidden = n === 0;
     b.textContent = n;
@@ -370,7 +368,7 @@ function toast(msg, { action } = {}) {
 
 // ---------------------------------------------------------------- Panier
 function openCart() {
-  $('#cart-drawer').innerHTML = V.cartDrawer(cart, thumbs);
+  $('#cart-drawer').innerHTML = V.wishDrawer(wish, thumbs);
   $('#cart-drawer').classList.add('open');
   $('#cart-drawer').setAttribute('aria-hidden', 'false');
   $('#cart-backdrop').hidden = false;
@@ -382,9 +380,9 @@ function closeCart() {
   $('#cart-backdrop').hidden = true;
 }
 const cartOpen = () => $('#cart-drawer').classList.contains('open');
-cart.onChange(() => {
+wish.onChange(() => {
   updateCartBadge();
-  if (cartOpen()) $('#cart-drawer').innerHTML = V.cartDrawer(cart, thumbs);
+  if (cartOpen()) $('#cart-drawer').innerHTML = V.wishDrawer(wish, thumbs);
 });
 $('#cart-btn').addEventListener('click', openCart);
 $('#cart-backdrop').addEventListener('click', closeCart);
@@ -446,33 +444,45 @@ document.addEventListener('click', async (e) => {
     } catch {
       toast(url);
     }
-  } else if (action === 'qty-dec' || action === 'qty-inc') {
-    qty = Math.max(1, Math.min(99, qty + (action === 'qty-inc' ? 1 : -1)));
-    $('#qty-value').textContent = qty;
-    const bt = $('#buy-total');
-    if (bt) bt.textContent = formatPrice(qty * route.product.price);
-  } else if (action === 'quick-add') {
-    const p = findProduct(btn.dataset.rayon, btn.dataset.slug);
-    cart.add(btn.dataset.rayon, btn.dataset.slug, 1);
-    music.ding();
-    btn.classList.remove('added');
-    void btn.offsetWidth;
-    btn.classList.add('added');
-    toast(`✓ ${p.name} ajouté au panier`, { action: 'Voir le panier' });
-  } else if (action === 'add') {
-    cart.add(route.rayon.slug, route.product.slug, qty);
-    music.ding();
-    toast(`✓ ${qty} × ${route.product.name} ajouté${qty > 1 ? 's' : ''} au panier`, { action: 'Voir le panier' });
-  } else if (action === 'cart-inc' || action === 'cart-dec') {
-    const l = cart.lines().find((x) => x.rayon === btn.dataset.rayon && x.slug === btn.dataset.slug);
-    if (l) cart.setQty(l.rayon, l.slug, l.qty + (action === 'cart-inc' ? 1 : -1));
-  } else if (action === 'cart-rm') {
-    cart.remove(btn.dataset.rayon, btn.dataset.slug);
+  } else if (action === 'wish') {
+    const { rayon, slug } = btn.dataset;
+    const on = wish.toggle(rayon, slug);
+    const p = findProduct(rayon, slug);
+    // met à jour tous les cœurs de ce produit affichés à l'écran
+    document.querySelectorAll(`[data-action="wish"][data-rayon="${rayon}"][data-slug="${slug}"]`).forEach((b) => {
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on);
+      b.setAttribute('aria-label', `${on ? 'Retirer de' : 'Ajouter à'} ma liste de Noël`);
+    });
+    if (on) {
+      music.ding();
+      btn.classList.remove('pop');
+      void btn.offsetWidth;
+      btn.classList.add('pop');
+    }
+    toast(on ? `♥ ${p.name} est dans votre liste de Noël` : `${p.name} retiré de votre liste`, on ? { action: 'Voir ma liste' } : {});
+  } else if (action === 'wish-rm') {
+    const { rayon, slug } = btn.dataset;
+    wish.remove(rayon, slug);
+    document.querySelectorAll(`[data-action="wish"][data-rayon="${rayon}"][data-slug="${slug}"]`).forEach((b) => {
+      b.classList.remove('on');
+      b.setAttribute('aria-pressed', 'false');
+    });
+  } else if (action === 'share-list') {
+    const names = wish.lines().map((l) => `• ${l.product.name} : ${location.origin}${V.productUrl(l.rayonObj, l.product)}`).join('\n');
+    const text = `Ma liste de Noël 🎄\n${names}`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'Ma liste de Noël', text });
+      else {
+        await navigator.clipboard.writeText(text);
+        toast('Liste copiée, prête à être envoyée ✨');
+      }
+    } catch {
+      /* partage annulé */
+    }
   } else if (action === 'close-cart') {
     closeCart();
     if (btn.dataset.go && entered) navigate(btn.dataset.go);
-  } else if (action === 'checkout') {
-    toast('La commande en ligne ouvre très bientôt ✨');
   } else if (action === 'open-cart' || action === 'toast-action') {
     openCart();
   } else if (action === 'open-shop') {
@@ -569,7 +579,7 @@ function setupPointer() {
     if (t?.type === 'product') {
       world.setHovered(t.entry);
       document.querySelector(`.prod-card[data-product="${t.entry.product.slug}"]`)?.classList.add('hl');
-      tip.innerHTML = `<strong>${t.entry.product.name}</strong><span>${formatPrice(t.entry.product.price)} · cliquer pour voir</span>`;
+      tip.innerHTML = `<strong>${t.entry.product.name}</strong><span>Cliquer pour voir la fiche</span>`;
     } else {
       world.setHovered(null);
       if (t?.type === 'chalet') {

@@ -20,6 +20,8 @@ const SLOTS_X = [-2.1, 0, 2.1];
 // isNarrow() = écran étroit → mise en page et cadrages « téléphone ».
 export const isMobile = matchMedia('(max-width: 760px), (pointer: coarse)').matches;
 export const isNarrow = () => matchMedia('(max-width: 760px)').matches;
+// Écran bas (téléphone couché) : on garde le menu à gauche mais en pleine hauteur
+export const isShort = () => matchMedia('(min-width: 761px) and (max-height: 520px)').matches;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
