@@ -303,7 +303,7 @@ export function createWorld(container, rayons) {
     },
     overview() {
       return isNarrow()
-        ? { pos: new THREE.Vector3(0, 36, 44), target: new THREE.Vector3(0, -17, -12) } // village cadré dans le haut de l'écran, au-dessus du volet
+        ? { pos: new THREE.Vector3(0, 34, 46), target: new THREE.Vector3(0, -11, -10) } // village cadré dans le haut de l'écran, au-dessus du volet
         : (() => {
             const k = Math.max(1, fitDist(24, 38) / 38);
             const x = views.panelOpen ? -4.5 : 0;
@@ -324,7 +324,7 @@ export function createWorld(container, rayons) {
       const p = entry.world.clone().add(new THREE.Vector3(0, 0.32, 0));
       return {
         pos: p.clone().add(n.clone().multiplyScalar(isNarrow() ? 4.6 : fitDist(1.3, 2.9))).add(new THREE.Vector3(0, isNarrow() ? 0.9 : 0.4, 0)),
-        target: p.clone().add(new THREE.Vector3(0, isNarrow() ? -1.25 : 0, 0)),
+        target: p.clone().add(new THREE.Vector3(0, isNarrow() ? -0.95 : 0, 0)),
       };
     },
   };

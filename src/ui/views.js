@@ -87,7 +87,7 @@ export function homePanel(thumbs) {
     ${chips(null)}
     <p class="eyebrow">Le village est réveillé</p>
     <h1>Cinq chalets.<br>Un Noël à composer.</h1>
-    <h3 class="section-title top-ideas">${ico.star} Les incontournables de Noël</h3>
+    <h3 class="section-title top-ideas">${ico.star} Les incontournables <button class="see-all" data-action="sheet-full">Tout voir ${ico.arrowR}</button></h3>
     <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs)).join('')}</div>
     <h3 class="section-title">${ico.tree} Entrez dans un chalet</h3>
     <ul class="rayon-list">
@@ -115,6 +115,7 @@ export function rayonPanel(rayon, thumbs, activeSlug) {
     <p class="eyebrow">Chalet ${rayon.number} sur ${RAYONS.length}</p>
     <h2>${rayon.name}</h2>
     <p class="lead">${rayon.description}</p>
+    <h3 class="section-title chalet-title">${rayon.products.length} idées dans ce chalet <button class="see-all" data-action="sheet-full">Tout voir ${ico.arrowR}</button></h3>
     <div class="prod-grid">
       ${rayon.products.map((p) => productCard(rayon, p, thumbs, p.slug === activeSlug)).join('')}
     </div>
@@ -135,7 +136,7 @@ export function productPanel(rayon, product, thumbs) {
   const others = rayon.products.filter((p) => p !== product).slice(0, 4);
   return `<div class="pp-scroll">
     <a class="icon-btn close" href="${rayonUrl(rayon)}" data-link aria-label="Fermer la fiche">${ico.close}</a>
-    <span class="pp-grip" aria-hidden="true"></span>
+    <button class="pp-grip" data-action="pp-toggle" aria-label="Replier ou déplier la fiche"></button>
     <a class="rayon-link" href="${rayonUrl(rayon)}" data-link><span class="dot"></span>${rayon.name}</a>
     <div class="pp-head">
       ${thumbBox(thumbs, product, 'pp-thumb')}

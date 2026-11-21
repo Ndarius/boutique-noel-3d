@@ -58,6 +58,18 @@ export function showCoach() {
   }
   const el = document.createElement('div');
   el.className = 'coach';
+  // toujours juste au-dessus du volet, jamais sur les produits ; masqué si la place manque
+  const place = () => {
+    if (!el.isConnected) return;
+    const side = document.querySelector('#side-panel');
+    const r = side && !side.classList.contains('is-hidden') ? side.getBoundingClientRect() : null;
+    if (r && innerWidth <= 760) {
+      el.style.bottom = `${innerHeight - r.top + 12}px`;
+      el.classList.toggle('no-room', r.top < 230);
+    }
+    requestAnimationFrame(place);
+  };
+  requestAnimationFrame(place);
   el.innerHTML = `<span class="coach-hand" aria-hidden="true">👆</span><span>Glissez pour tourner autour du village<br><strong>Touchez un chalet pour y entrer</strong></span>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('on'));

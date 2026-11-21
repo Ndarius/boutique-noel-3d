@@ -275,6 +275,7 @@ function renderAll() {
   const pp = $('#product-panel');
   if (route.view === 'product') {
     pp.innerHTML = V.productPanel(route.rayon, route.product, thumbs);
+    pp.classList.remove('folded');
     pp.hidden = false;
     pp.style.animation = 'none';
     void pp.offsetWidth;
@@ -295,6 +296,7 @@ function setSheet(state) {
   const side = $('#side-panel');
   side.classList.remove('sheet-peek', 'sheet-half', 'sheet-full');
   side.classList.add(`sheet-${state}`);
+  document.body.dataset.sheet = state;
   side.style.removeProperty('--drag');
 }
 (function sheetDrag() {
@@ -438,7 +440,16 @@ document.addEventListener('click', async (e) => {
     if (route.view === 'product') navigate(V.rayonUrl(route.rayon));
     setSheet('full');
   } else if (action === 'toggle-sheet' && isNarrow()) {
-    setSheet(sheetState === 'full' ? 'half' : sheetState === 'half' ? 'full' : 'half');
+    // toucher la barre : ferme (aperçu) ou rouvre ; depuis le plein écran, revient à mi-hauteur
+    setSheet(sheetState === 'peek' ? 'half' : sheetState === 'full' ? 'half' : 'peek');
+  } else if (action === 'sheet-full') {
+    setSheet('full');
+  } else if (action === 'pp-toggle') {
+    const pp = $('#product-panel');
+    pp.classList.toggle('folded');
+    btn.blur();
+    pp.scrollLeft = 0;
+    pp.querySelector('.pp-scroll').scrollTop = 0;
   } else if (action === 'toggle-sheet') {
     panelCollapsed = !panelCollapsed;
     try {
