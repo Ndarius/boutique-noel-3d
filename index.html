@@ -59,11 +59,6 @@
           <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
           <span class="sr-only">Activer ou couper la musique</span>
         </button>
-        <button class="icon-btn" id="cart-btn" title="Ma liste de Noël">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.6 5c2 0 3.4 1.1 4.4 2.6h2C14 6.1 15.4 5 17.4 5c3.2 0 5 3.4 3.6 6.4C19 15.6 12 20 12 20z"/></svg>
-          <span class="badge" id="cart-count" hidden>0</span>
-          <span class="sr-only">Ouvrir ma liste de Noël</span>
-        </button>
         <button class="icon-btn menu-btn" id="menu-btn" aria-expanded="false" aria-controls="rayon-nav" title="Rayons">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
           <span class="sr-only">Menu des rayons</span>
@@ -102,15 +97,13 @@
       <button class="tab" data-tab="boutique" data-action="open-shop">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16l-1-5H5z"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg><span>Boutique</span>
       </button>
-      <button class="tab" data-tab="liste" data-action="open-cart">
-        <span class="tab-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.6 5c2 0 3.4 1.1 4.4 2.6h2C14 6.1 15.4 5 17.4 5c3.2 0 5 3.4 3.6 6.4C19 15.6 12 20 12 20z"/></svg><b class="badge" id="tab-cart-count" hidden>0</b></span><span>Ma liste</span>
+      <button class="tab" data-tab="top" data-action="open-top">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg><span>Top idées</span>
       </button>
     </nav>
 
     <div id="tooltip" role="tooltip" hidden></div>
 
-    <div id="cart-backdrop" hidden></div>
-    <aside id="cart-drawer" class="cart-drawer" aria-label="Ma liste de Noël" aria-hidden="true"></aside>
 
     <div id="toast" role="status" aria-live="polite"></div>
 

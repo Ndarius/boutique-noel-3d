@@ -42,8 +42,9 @@ Tout se règle dans `src/data/catalog.js` :
 3. **Les prix** : masqués par défaut (`showPrices: false`), car le règlement Amazon
    Partenaires interdit les prix fixes non mis à jour.
 
-Les visiteurs peuvent garder leurs idées dans « Ma liste de Noël » (bouton cœur), puis
-les ouvrir sur Amazon. La mention obligatoire « Partenaire Amazon » est affichée.
+Chaque produit a un bouton « Acheter » (cartes) et « Acheter maintenant » (fiche) qui
+ouvre son lien dans un nouvel onglet. La mention obligatoire « Partenaire Amazon » est
+affichée en petit (exigée par le programme).
 
 ## Modifier la boutique
 

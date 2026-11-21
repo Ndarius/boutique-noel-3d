@@ -4,7 +4,6 @@ import { RAYONS, BRAND, findRayon, findProduct } from './data/catalog.js';
 import { createWorld, isMobile, isNarrow, isShort } from './scene/world.js';
 import { renderThumbnails } from './scene/thumbnails.js';
 import { ChristmasMusic } from './audio/music.js';
-import { createWishlist } from './ui/wishlist.js';
 import * as V from './ui/views.js';
 import { playIntro, prelude } from './scene/intro.js';
 
@@ -12,7 +11,6 @@ const $ = (s) => document.querySelector(s);
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
 
 const music = new ChristmasMusic();
-const wish = createWishlist();
 let world;
 let thumbs = new Map();
 let entered = false;
@@ -89,7 +87,6 @@ function loadThumbnails() {
     thumbs = m;
     sideKey = '';
     renderAll();
-    if (cartOpen()) $('#cart-drawer').innerHTML = V.wishDrawer(wish, thumbs);
   });
 }
 
@@ -173,13 +170,13 @@ function parse(path) {
     }
     return { view: 'rayon', rayon };
   }
-  if (parts[0] === 'liste' || parts[0] === 'panier') return { view: 'home', cart: true };
   return { view: 'home' };
 }
 
 const canonical = (r) => (r.view === 'product' ? V.productUrl(r.rayon, r.product) : r.view === 'rayon' ? V.rayonUrl(r.rayon) : '/');
 
 function navigate(path) {
+  topMode = false;
   if (path === location.pathname) {
     applyRoute(parse(path));
     return;
@@ -195,8 +192,7 @@ function applyRoute(next, { first = false } = {}) {
   if (next.notFound) {
     toast("Cette adresse n'existe pas — nous vous ramenons au bon endroit.");
     history.replaceState({}, '', canonical(next));
-  } else if (next.cart) history.replaceState({}, '', '/');
-  if (next.cart) openCart();
+  }
 
   updateTitle();
   renderAll();
@@ -251,14 +247,14 @@ function renderAll() {
   if (key !== sideKey) {
     const keepScroll = sideKey.startsWith(`rayon:${current}:`) && route.view !== 'home';
     const scroll = side.querySelector('.panel-scroll')?.scrollTop || 0;
-    side.innerHTML = route.view === 'home' ? V.homePanel(thumbs, wish) : V.rayonPanel(route.rayon, thumbs, wish, route.product?.slug);
+    side.innerHTML = route.view === 'home' ? V.homePanel(thumbs) : V.rayonPanel(route.rayon, thumbs, route.product?.slug);
     if (keepScroll) side.querySelector('.panel-scroll').scrollTop = scroll;
     sideKey = key;
   }
   side.classList.toggle('is-hidden', !entered || ((isNarrow() || isShort()) && route.view === 'product'));
   side.classList.toggle('collapsed', panelCollapsed && !isNarrow());
   if (isNarrow() && !side.className.includes('sheet-')) setSheet('half');
-  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === (cartOpen() ? 'liste' : route.view === 'home' ? 'village' : 'boutique')));
+  renderTabs();
   const accent = route.rayon?.accent || '#e8c27a';
   side.style.setProperty('--accent', accent);
   $('#product-panel').style.setProperty('--accent', accent);
@@ -267,31 +263,22 @@ function renderAll() {
 
   const pp = $('#product-panel');
   if (route.view === 'product') {
-    pp.innerHTML = V.productPanel(route.rayon, route.product, thumbs, wish);
+    pp.innerHTML = V.productPanel(route.rayon, route.product, thumbs);
     pp.hidden = false;
     pp.style.animation = 'none';
     void pp.offsetWidth;
     pp.style.animation = '';
   } else pp.hidden = true;
 
-  updateCartBadge(false);
 }
 
-function updateCartBadge(bump = true) {
-  const n = wish.count();
-  for (const b of [$('#cart-count'), $('#tab-cart-count')]) {
-    b.hidden = n === 0;
-    b.textContent = n;
-    if (bump) {
-      b.classList.remove('bump');
-      void b.offsetWidth;
-      b.classList.add('bump');
-    }
-  }
-}
 
 // ---------------------------------------------------------------- Volet mobile (peek / half / full)
 let sheetState = 'half';
+let topMode = false;
+function renderTabs() {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === (route.view === 'home' ? (topMode ? 'top' : 'village') : 'boutique')));
+}
 function setSheet(state) {
   sheetState = state;
   const side = $('#side-panel');
@@ -352,40 +339,16 @@ function updatePanelTab() {
 addEventListener('resize', () => updatePanelTab());
 
 let toastTimer;
-function toast(msg, { action } = {}) {
+function toast(msg) {
   const t = $('#toast');
   t.textContent = msg;
-  if (action) {
-    const b = document.createElement('button');
-    b.dataset.action = 'toast-action';
-    b.textContent = action;
-    t.appendChild(b);
-  }
+
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
 // ---------------------------------------------------------------- Panier
-function openCart() {
-  $('#cart-drawer').innerHTML = V.wishDrawer(wish, thumbs);
-  $('#cart-drawer').classList.add('open');
-  $('#cart-drawer').setAttribute('aria-hidden', 'false');
-  $('#cart-backdrop').hidden = false;
-  setTimeout(() => $('#cart-drawer [data-action="close-cart"]')?.focus(), 50);
-}
-function closeCart() {
-  $('#cart-drawer').classList.remove('open');
-  $('#cart-drawer').setAttribute('aria-hidden', 'true');
-  $('#cart-backdrop').hidden = true;
-}
-const cartOpen = () => $('#cart-drawer').classList.contains('open');
-wish.onChange(() => {
-  updateCartBadge();
-  if (cartOpen()) $('#cart-drawer').innerHTML = V.wishDrawer(wish, thumbs);
-});
-$('#cart-btn').addEventListener('click', openCart);
-$('#cart-backdrop').addEventListener('click', closeCart);
 
 // ---------------------------------------------------------------- Musique
 const soundBtn = $('#sound-btn');
@@ -429,7 +392,6 @@ document.addEventListener('click', async (e) => {
   if (a && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
     e.preventDefault();
     closeMenu();
-    if (cartOpen()) closeCart();
     if (entered) navigate(a.getAttribute('href'));
     return;
   }
@@ -444,47 +406,22 @@ document.addEventListener('click', async (e) => {
     } catch {
       toast(url);
     }
-  } else if (action === 'wish') {
-    const { rayon, slug } = btn.dataset;
-    const on = wish.toggle(rayon, slug);
-    const p = findProduct(rayon, slug);
-    // met à jour tous les cœurs de ce produit affichés à l'écran
-    document.querySelectorAll(`[data-action="wish"][data-rayon="${rayon}"][data-slug="${slug}"]`).forEach((b) => {
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', on);
-      b.setAttribute('aria-label', `${on ? 'Retirer de' : 'Ajouter à'} ma liste de Noël`);
-    });
-    if (on) {
-      music.ding();
-      btn.classList.remove('pop');
-      void btn.offsetWidth;
-      btn.classList.add('pop');
-    }
-    toast(on ? `♥ ${p.name} est dans votre liste de Noël` : `${p.name} retiré de votre liste`, on ? { action: 'Voir ma liste' } : {});
-  } else if (action === 'wish-rm') {
-    const { rayon, slug } = btn.dataset;
-    wish.remove(rayon, slug);
-    document.querySelectorAll(`[data-action="wish"][data-rayon="${rayon}"][data-slug="${slug}"]`).forEach((b) => {
-      b.classList.remove('on');
-      b.setAttribute('aria-pressed', 'false');
-    });
-  } else if (action === 'share-list') {
-    const names = wish.lines().map((l) => `• ${l.product.name} : ${location.origin}${V.productUrl(l.rayonObj, l.product)}`).join('\n');
-    const text = `Ma liste de Noël 🎄\n${names}`;
-    try {
-      if (navigator.share) await navigator.share({ title: 'Ma liste de Noël', text });
-      else {
-        await navigator.clipboard.writeText(text);
-        toast('Liste copiée, prête à être envoyée ✨');
-      }
-    } catch {
-      /* partage annulé */
-    }
-  } else if (action === 'close-cart') {
-    closeCart();
-    if (btn.dataset.go && entered) navigate(btn.dataset.go);
-  } else if (action === 'open-cart' || action === 'toast-action') {
-    openCart();
+  } else if (action === 'open-top') {
+    if (!entered) return;
+    const go = () => {
+      topMode = true;
+      setSheet('full');
+      setTimeout(() => {
+        const t = $('#side-panel .top-ideas');
+        const sc = $('#side-panel .panel-scroll');
+        if (t && sc) sc.scrollTo({ top: t.offsetTop - 64, behavior: 'smooth' });
+        renderTabs();
+      }, 80);
+    };
+    if (route.view !== 'home') {
+      navigate('/');
+      setTimeout(go, 60);
+    } else go();
   } else if (action === 'open-shop') {
     if (!entered) return;
     if (route.view === 'product') navigate(V.rayonUrl(route.rayon));
@@ -533,12 +470,10 @@ addEventListener('keydown', (e) => {
   }
   if (e.target.closest('input, textarea')) return;
   if (e.key === 'Escape') {
-    if (cartOpen()) return closeCart();
     if ($('#rayon-nav').classList.contains('open')) return closeMenu();
     if (route.view === 'product') navigate(V.rayonUrl(route.rayon));
     else if (route.view === 'rayon') navigate('/');
   } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-    if (cartOpen()) return;
     const dir = e.key === 'ArrowRight' ? 1 : -1;
     route.view === 'product' ? stepProduct(dir) : stepRayon(dir);
   } else if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey) {

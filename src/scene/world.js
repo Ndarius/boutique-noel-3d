@@ -303,7 +303,7 @@ export function createWorld(container, rayons) {
     },
     overview() {
       return isNarrow()
-        ? { pos: new THREE.Vector3(0, 30, 50), target: new THREE.Vector3(0, -5, -6) }
+        ? { pos: new THREE.Vector3(0, 36, 44), target: new THREE.Vector3(0, -17, -12) } // village cadré dans le haut de l'écran, au-dessus du volet
         : (() => {
             const k = Math.max(1, fitDist(24, 38) / 38);
             const x = views.panelOpen ? -4.5 : 0;

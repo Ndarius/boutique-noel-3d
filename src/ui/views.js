@@ -14,6 +14,8 @@ export const ico = {
   chevron: svg('<path d="m6 15 6-6 6 6"/>'),
   heart: svg('<path d="M12 20s-7-4.4-9-8.6C1.6 8.4 3.4 5 6.6 5c2 0 3.4 1.1 4.4 2.6h2C14 6.1 15.4 5 17.4 5c3.2 0 5 3.4 3.6 6.4C19 15.6 12 20 12 20z"/>'),
   external: svg('<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
+  cart: svg('<circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/><path d="M2 3h3l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.2"/>'),
+  lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
   gift: svg('<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8S10 3 7.5 4.5 9 8 12 8zm0 0s2-5 4.5-3.5S15 8 12 8z"/>'),
   tree: svg('<path d="M12 3 7 10h3l-4 6h12l-4-6h3z"/><path d="M12 16v4"/>'),
   star: svg('<path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>'),
@@ -62,10 +64,8 @@ function sheetHead(title, sub) {
 }
 
 // ---------------------------------------------------------------- Cartes produit
-// Toucher la carte ouvre la fiche (produit en 3D) ; « Amazon » ouvre le produit sur Amazon ;
-// le cœur garde l'idée dans « Ma liste de Noël ».
-export function productCard(rayon, p, thumbs, wish, active) {
-  const saved = wish.has(rayon.slug, p.slug);
+// Toucher l'image ouvre la fiche (produit en 3D) ; « Acheter » mène directement à Amazon.
+export function productCard(rayon, p, thumbs, active) {
   return `<article class="prod-card" data-product="${p.slug}" style="--accent:${rayon.accent}" ${active ? 'aria-current="true"' : ''}>
     <a class="prod-link" href="${productUrl(rayon, p)}" data-link>
       ${p.badge ? `<span class="tag">${p.badge}</span>` : ''}
@@ -73,21 +73,23 @@ export function productCard(rayon, p, thumbs, wish, active) {
       <span class="name">${p.name}</span>
       ${priceTag(p)}
     </a>
-    <a class="card-amazon" ${amazonAttrs(p)} aria-label="Voir « ${p.name} » sur Amazon">Voir sur Amazon ${ico.external}</a>
-    <button class="wish ${saved ? 'on' : ''}" data-action="wish" data-rayon="${rayon.slug}" data-slug="${p.slug}" aria-pressed="${saved}" aria-label="${saved ? 'Retirer de' : 'Ajouter à'} ma liste de Noël">${ico.heart}</button>
+    <a class="card-buy" ${amazonAttrs(p)} data-buy="${p.slug}" aria-label="Acheter « ${p.name} »">${ico.cart} Acheter</a>
   </article>`;
 }
 
 // ---------------------------------------------------------------- Accueil
-export function homePanel(thumbs, wish) {
+// Les meilleures ventes d'abord : un visiteur venu acheter voit tout de suite quoi acheter.
+export function homePanel(thumbs) {
   const total = RAYONS.reduce((n, r) => n + r.products.length, 0);
-  const favs = RAYONS.flatMap((r) => r.products.filter((p) => p.badge === 'Best-seller').map((p) => [r, p])).slice(0, 4);
+  const favs = RAYONS.flatMap((r) => r.products.filter((p) => p.badge).map((p) => [r, p])).slice(0, 6);
   return `${sheetHead('Le village', `5 chalets · ${total} idées déco de Noël`)}
   <div class="panel-scroll">
     ${chips(null)}
     <p class="eyebrow">Le village est réveillé</p>
     <h1>Cinq chalets.<br>Un Noël à composer.</h1>
-    <p class="lead">Chaque chalet garde une partie de la magie. Entrez, approchez-vous des étagères et gardez vos coups de cœur dans votre liste de Noël.</p>
+    <h3 class="section-title top-ideas">${ico.star} Les incontournables de Noël</h3>
+    <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs)).join('')}</div>
+    <h3 class="section-title">${ico.tree} Entrez dans un chalet</h3>
     <ul class="rayon-list">
       ${RAYONS.map(
         (r) => `<li><a class="rayon-card" href="${rayonUrl(r)}" data-link data-rayon="${r.slug}" style="--accent:${r.accent}">
@@ -97,14 +99,12 @@ export function homePanel(thumbs, wish) {
           <span class="arrow">${ico.arrowR}</span></a></li>`,
       ).join('')}
     </ul>
-    <h3 class="section-title">${ico.star} Les coups de cœur du village</h3>
-    <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs, wish)).join('')}</div>
     ${disclosure()}
   </div>`;
 }
 
 // ---------------------------------------------------------------- Chalet
-export function rayonPanel(rayon, thumbs, wish, activeSlug) {
+export function rayonPanel(rayon, thumbs, activeSlug) {
   const i = RAYONS.indexOf(rayon);
   const prev = RAYONS[(i + RAYONS.length - 1) % RAYONS.length];
   const next = RAYONS[(i + 1) % RAYONS.length];
@@ -116,7 +116,7 @@ export function rayonPanel(rayon, thumbs, wish, activeSlug) {
     <h2>${rayon.name}</h2>
     <p class="lead">${rayon.description}</p>
     <div class="prod-grid">
-      ${rayon.products.map((p) => productCard(rayon, p, thumbs, wish, p.slug === activeSlug)).join('')}
+      ${rayon.products.map((p) => productCard(rayon, p, thumbs, p.slug === activeSlug)).join('')}
     </div>
     <button class="share-chalet" data-action="copy" data-path="${rayonUrl(rayon)}">${ico.share} Partager ce chalet</button>
     <div class="pager">
@@ -128,12 +128,11 @@ export function rayonPanel(rayon, thumbs, wish, activeSlug) {
 }
 
 // ---------------------------------------------------------------- Fiche produit
-export function productPanel(rayon, product, thumbs, wish) {
+export function productPanel(rayon, product, thumbs) {
   const i = rayon.products.indexOf(product);
   const prev = rayon.products[(i + rayon.products.length - 1) % rayon.products.length];
   const next = rayon.products[(i + 1) % rayon.products.length];
   const others = rayon.products.filter((p) => p !== product).slice(0, 4);
-  const saved = wish.has(rayon.slug, product.slug);
   return `<div class="pp-scroll">
     <a class="icon-btn close" href="${rayonUrl(rayon)}" data-link aria-label="Fermer la fiche">${ico.close}</a>
     <span class="pp-grip" aria-hidden="true"></span>
@@ -158,33 +157,8 @@ export function productPanel(rayon, product, thumbs, wish) {
     ${disclosure()}
   </div>
   <div class="buy-bar">
-    <button class="wish-big ${saved ? 'on' : ''}" data-action="wish" data-rayon="${rayon.slug}" data-slug="${product.slug}" aria-pressed="${saved}" aria-label="${saved ? 'Retirer de' : 'Ajouter à'} ma liste de Noël">${ico.heart}</button>
-    <a class="btn btn-gold btn-amazon" ${amazonAttrs(product)}>Voir sur Amazon ${ico.external}</a>
+    <a class="btn btn-buy" ${amazonAttrs(product)} data-buy="${product.slug}">${ico.cart}<span>Acheter maintenant</span></a>
+    <p class="buy-note">${ico.lock} Paiement 100 % sécurisé</p>
   </div>`;
 }
 
-// ---------------------------------------------------------------- Ma liste de Noël
-export function wishDrawer(wish, thumbs) {
-  const lines = wish.lines();
-  const body = lines.length
-    ? `<ul class="cart-items">${lines
-        .map(
-          (l) => `<li class="cart-item wish-item" style="--accent:${l.rayonObj.accent}">
-          <a class="thumb" href="${productUrl(l.rayonObj, l.product)}" data-link aria-label="Voir la fiche de ${l.product.name}">${img(thumbs, l.product)}</a>
-          <div class="ci-main"><a class="n" href="${productUrl(l.rayonObj, l.product)}" data-link>${l.product.name}</a>
-            <div class="r"><span class="dot"></span>${l.rayonObj.name}</div>
-            <a class="wl-amazon" ${amazonAttrs(l.product)}>Voir sur Amazon ${ico.external}</a></div>
-          <button class="rm-x" data-action="wish-rm" data-rayon="${l.rayon}" data-slug="${l.slug}" aria-label="Retirer ${l.product.name} de ma liste">${ico.close}</button>
-        </li>`,
-        )
-        .join('')}</ul>`
-    : `<div class="cart-items"><div class="cart-empty">${ico.heart}<p><strong>Votre liste de Noël est vide.</strong><br>Touchez le cœur d’une décoration pour la garder ici, puis retrouvez-la sur Amazon quand vous voulez.</p>
-        <button class="btn btn-ghost" data-action="close-cart" data-go="/">Découvrir le village</button></div></div>`;
-  return `<div class="cart-head"><h2>Ma liste de Noël${lines.length ? ` <small>(${lines.length})</small>` : ''}</h2>
-      <button class="icon-btn" data-action="close-cart" aria-label="Fermer ma liste">${ico.close}</button></div>
-    ${body}
-    <div class="cart-foot">
-      ${lines.length ? `<button class="btn btn-ghost btn-block" data-action="share-list">${ico.share} Partager ma liste</button>` : ''}
-      ${disclosure()}
-    </div>`;
-}
