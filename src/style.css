@@ -746,3 +746,7 @@ body.cinematic .topbar, body.cinematic .dock, body.cinematic .panel { opacity: 0
   #nl-badge-frame { top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)) !important; bottom: auto !important; transform: scale(0.82); transform-origin: top right; }
   body.has-product #nl-badge-frame, body.cinematic #nl-badge-frame { opacity: 0.35; }
 }
+@media (max-width: 760px) {
+  .skip { top: auto; bottom: calc(7vh + 14px + env(safe-area-inset-bottom, 0px)); right: 16px; }
+  .caption { bottom: calc(7vh + 70px); }
+}
