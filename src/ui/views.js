@@ -158,7 +158,6 @@ export function productPanel(rayon, product, thumbs) {
   </div>
   <div class="buy-bar">
     <a class="btn btn-buy" ${amazonAttrs(product)} data-buy="${product.slug}">${ico.cart}<span>Acheter maintenant</span></a>
-    <p class="buy-note">${ico.lock} Paiement 100 % sécurisé</p>
   </div>`;
 }
 
