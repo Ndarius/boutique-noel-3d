@@ -23,7 +23,7 @@ export function renderThumbnails(world, entries, { perFrame = 2, size = 168 } = 
   const pr = renderer.getPixelRatio();
   const dev = Math.round(size * pr);
   const canvas2d = document.createElement('canvas');
-  canvas2d.width = canvas2d.height = Math.min(dev, 320);
+  canvas2d.width = canvas2d.height = Math.min(dev, 512);
   const ctx = canvas2d.getContext('2d');
   const full = new THREE.Vector2();
   const prevClear = new THREE.Color();

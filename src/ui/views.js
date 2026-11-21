@@ -89,6 +89,7 @@ export function homePanel(thumbs) {
     <h1>Cinq chalets.<br>Un Noël à composer.</h1>
     <h3 class="section-title top-ideas">${ico.star} Les incontournables <button class="see-all" data-action="sheet-full">Tout voir ${ico.arrowR}</button></h3>
     <div class="prod-grid">${favs.map(([r, p]) => productCard(r, p, thumbs)).join('')}</div>
+    <button class="story-btn" data-action="story"><span class="sb-play">▶</span><span><strong>L’histoire du village</strong><small>Le Père Noël passe en avance · 15 s</small></span></button>
     <h3 class="section-title">${ico.tree} Entrez dans un chalet</h3>
     <ul class="rayon-list">
       ${RAYONS.map(

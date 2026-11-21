@@ -306,7 +306,7 @@ export function createWorld(container, rayons) {
         ? { pos: new THREE.Vector3(0, 34, 46), target: new THREE.Vector3(0, -11, -10) } // village cadré dans le haut de l'écran, au-dessus du volet
         : (() => {
             const k = Math.max(1, fitDist(24, 38) / 38);
-            const x = views.panelOpen ? -4.5 : 0;
+            const x = views.panelOpen ? -4.5 * Math.min(1.5, Math.max(1, (Math.min(520, Math.max(360, innerWidth * 0.27)) / innerWidth) / 0.27)) : 0;
             return { pos: new THREE.Vector3(x, 16 * k, 33 * k), target: new THREE.Vector3(x, 1.5, -5) };
           })();
     },
@@ -340,6 +340,18 @@ export function createWorld(container, rayons) {
   }
 
   // ---------------------------------------------------------------- Boucle
+  const perf = { samples: 0, total: 0, low: false };
+  function lowQuality() {
+    if (perf.low) return;
+    perf.low = true;
+    bloom.enabled = false;
+    renderer.setPixelRatio(1);
+    renderer.shadowMap.enabled = false;
+    moon.castShadow = false;
+    scene.traverse((o) => o.material && (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)));
+    snow.points.geometry.setDrawRange(0, 900);
+    resize();
+  }
   let introSpin = true;
   let director = null;
   const updaters = [];
@@ -402,7 +414,14 @@ export function createWorld(container, rayons) {
       c.signMat.emissiveIntensity = (0.55 + (c.highlight ? 0.45 : 0) + Math.sin(t * 2 + c.index) * 0.03) * (c.illum ?? 1);
     }
 
-    composer.render();
+    // Qualité adaptée à la machine : si l'ordinateur peine, on coupe les effets coûteux
+    if (perf.samples < 120) {
+      perf.samples++;
+      perf.total += realDt;
+      if (perf.samples === 120 && perf.total / 120 > 1 / 28) lowQuality();
+    }
+    if (bloom.enabled) composer.render();
+    else renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
 

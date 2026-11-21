@@ -5,15 +5,17 @@ import { createWorld, isMobile, isNarrow, isShort } from './scene/world.js';
 import { renderThumbnails } from './scene/thumbnails.js';
 import { ChristmasMusic } from './audio/music.js';
 import * as V from './ui/views.js';
-import { playIntro, prelude } from './scene/intro.js';
+import { playIntro } from './scene/intro.js';
 import { createHotspots, showCoach } from './ui/hotspots.js';
 
 const $ = (s) => document.querySelector(s);
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
 
+// ?export-thumbs : régénère les images des produits (outil de développement)
+const EXPORT_THUMBS = new URLSearchParams(location.search).has('export-thumbs');
 const music = new ChristmasMusic();
 let world;
-let thumbs = new Map();
+let thumbs = new Map(RAYONS.flatMap((r) => r.products.map((p) => [p.slug, `/produits/${p.slug}.webp`])));
 let entered = false;
 let route = { view: 'home' };
 let sideKey = '';
@@ -43,65 +45,59 @@ function webglAvailable() {
   }
 }
 
+// Démarrage : la boutique est utilisable IMMÉDIATEMENT (HTML + images prêtes),
+// le village 3D se construit ensuite et apparaît en fondu derrière.
 async function boot() {
+  route = parse(location.pathname);
+  entered = true;
+  renderAll();
+  $('#loader').classList.add('gone');
+  setTimeout(() => !music.enabled && soundBtn.classList.add('invite'), 2500);
+
   if (!webglAvailable()) {
-    progress(1, "Votre navigateur ne prend pas en charge la 3D (WebGL). Essayez avec Chrome, Edge, Firefox ou Safari récents.");
+    document.body.classList.add('no3d');
     return;
   }
-  progress(0.25, 'Les flocons se posent sur les toits…');
+  // laisse le navigateur afficher la boutique avant le calcul de la 3D
   await nextFrame();
-  world = createWorld($('#scene'), RAYONS);
+  await new Promise((r) => setTimeout(r, 60));
+  try {
+    world = createWorld($('#scene'), RAYONS);
+  } catch {
+    document.body.classList.add('no3d');
+    return;
+  }
   world.views.panelOpen = !panelCollapsed;
-  // les enseignes sont redessinées dès que la police élégante est arrivée (sans bloquer le chargement)
   document.fonts?.ready.then(() => world.refreshSigns());
   world.onContextLost(() => {
     $('#gl-lost').hidden = false;
   });
-  progress(0.8, 'Les lanternes attendent leur flamme…');
-  route = parse(location.pathname);
-  let seen = false;
-  try {
-    seen = localStorage.getItem('msdn-histoire-vue') === '1';
-  } catch {
-    /* première visite par défaut */
-  }
-  // L'histoire n'est jouée qu'à la première visite de l'accueil
-  playStory = route.view === 'home' && !seen;
-  // Les images des produits sont fabriquées AVANT l'ouverture (village encore éclairé) :
-  // aucune carte vide quand la boutique apparaît.
-  progress(0.85, 'On emballe les décorations…');
-  await Promise.race([loadThumbnails(), new Promise((r) => setTimeout(r, 6000))]);
-  if (playStory) prelude(world);
-  renderAll();
-  $('#side-panel').classList.add('is-hidden');
-  await nextFrame();
-  progress(1, 'Le village vous attend.');
-  $('#loader').classList.add('ready');
+  world.stopIntro();
+  moveCamera({ view: 'home' }, route, true);
   setupPointer();
   createHotspots(world, {
     onOpen: (r) => navigate(V.rayonUrl(r)),
     isVisible: () => entered && route.view === 'home' && !world.flying && !document.body.classList.contains('cinematic'),
   });
-  // Entrée directe, en muet : la musique s'active avec le bouton 🔈
-  setTimeout(() => enter(false), 350);
+  requestAnimationFrame(() => document.body.classList.add('scene-ready'));
+  if (route.view === 'home') setTimeout(showCoach, 3800);
+  if (EXPORT_THUMBS) loadThumbnails();
 }
 
-// Vignettes des produits : fabriquées en arrière-plan, après l'ouverture
+// Images des produits : fichiers préparés à l'avance (public/produits/*.webp).
+// Pour les régénérer après une modification des modèles 3D : ouvrir le site avec ?export-thumbs.
 let thumbsStarted = false;
 let thumbsPromise = null;
 function loadThumbnails() {
   if (thumbsStarted) return thumbsPromise;
   thumbsStarted = true;
-  return (thumbsPromise = renderThumbnails(world, world.products).then((m) => {
-    thumbs = m;
-    sideKey = '';
-    renderAll();
+  return (thumbsPromise = renderThumbnails(world, world.products, { size: 320, perFrame: 1 }).then((m) => {
+    window.__thumbs = Object.fromEntries(m);
   }));
 }
 
 // ---------------------------------------------------------------- Séquence d'ouverture
 let introCtl = null;
-let playStory = false;
 function startStory() {
   document.body.classList.add('cinematic');
   const cinema = $('#cinema');
@@ -140,10 +136,7 @@ function startStory() {
           cinema.classList.remove('on');
           setTimeout(() => {
             document.body.classList.remove('cinematic');
-            entered = true;
             renderAll();
-            setTimeout(showCoach, 600);
-            loadThumbnails();
           }, 700);
           setTimeout(() => (cinema.hidden = true), 1300);
         }, 1600);
@@ -153,20 +146,15 @@ function startStory() {
 }
 $('#skip').addEventListener('click', () => introCtl?.skip());
 
-function enter(withMusic) {
-  if (entered || introCtl) return;
-  if (withMusic) music.start();
-  else setTimeout(() => !music.enabled && soundBtn.classList.add('invite'), 1500);
-  $('#loader').classList.add('gone');
-  if (playStory) {
-    startStory();
-    return;
-  }
-  entered = true;
-  world.stopIntro();
-  applyRoute(parse(location.pathname), { first: true });
-  if (route.view === 'home') setTimeout(showCoach, 3600);
+// « ▶ L'histoire du village » : la séquence du Père Noël, à la demande
+function playStoryNow() {
+  if (!world || introCtl) return;
+  if (route.view !== 'home') navigate('/');
+  $('#skip').hidden = false;
+  $('#title-card').classList.remove('show');
+  startStory();
 }
+
 
 // ====================================================================== Routeur (une adresse par rayon)
 function parse(path) {
@@ -271,6 +259,7 @@ function renderAll() {
   $('#product-panel').style.setProperty('--accent', accent);
   updatePanelTab();
   document.body.classList.toggle('has-product', route.view === 'product');
+  updateLayoutFlags();
 
   const pp = $('#product-panel');
   if (route.view === 'product') {
@@ -334,6 +323,13 @@ function setSheet(state) {
     if (side.dataset.dragged && e.target.closest('.panel-head')) e.stopPropagation();
   }, true);
 })();
+
+// Repère pour la mise en page ordinateur : le menu de gauche est-il ouvert ?
+function updateLayoutFlags() {
+  const side = $('#side-panel');
+  document.body.classList.toggle('panel-open', !isNarrow() && !side.classList.contains('is-hidden') && !side.classList.contains('collapsed'));
+}
+addEventListener('resize', () => updateLayoutFlags());
 
 // ---------------------------------------------------------------- Menu repliable
 let panelCollapsed = false;
@@ -435,6 +431,8 @@ document.addEventListener('click', async (e) => {
       navigate('/');
       setTimeout(go, 60);
     } else go();
+  } else if (action === 'story') {
+    playStoryNow();
   } else if (action === 'open-shop') {
     if (!entered) return;
     if (route.view === 'product') navigate(V.rayonUrl(route.rayon));
@@ -459,6 +457,7 @@ document.addEventListener('click', async (e) => {
     }
     $('#side-panel').classList.toggle('collapsed', panelCollapsed);
     updatePanelTab();
+    updateLayoutFlags();
     // recadre la scène pour occuper la place libérée (ou laisser la place au menu)
     if (entered && !isNarrow() && route.view !== 'product') {
       world.views.panelOpen = !panelCollapsed;

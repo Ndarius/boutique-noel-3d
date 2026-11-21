@@ -50,6 +50,8 @@ affichée en petit (exigée par le programme).
 
 - **Produits, prix, textes, rayons** : `src/data/catalog.js`
 - **Modèles 3D des produits** : `src/scene/models.js` (générés en code)
+- **Images des produits** : `public/produits/*.webp`, préparées à l'avance pour un affichage instantané.
+  Après une modification d'un modèle 3D, ouvrez le site avec `?export-thumbs` pour les régénérer.
 - **Décor (chalets, sapin géant, neige, forêt)** : `src/scene/world.js`
 - **Musique** : `src/audio/music.js` — Jingle Bells & Douce Nuit (domaine public), synthétisés en direct
 - **Style de l'interface** : `src/style.css`
